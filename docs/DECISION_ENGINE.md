@@ -7,6 +7,19 @@ symbol per run, persisted to the SQLite database for back-evaluation.
 Date: 2026-05-02. Mirrors the stock sibling's architecture; crypto-tuned
 defaults documented in-line. Paper-only and shadow-only in v1.
 
+## 2026-05 score-scale migration
+
+Candidate `score` migrated from raw `[-1, +1]` aggregated signal strength
+to a `[0, 100]` weighted feature aggregation:
+- momentum (0.35), volatility_regime (0.20), rel_strength_vs_btc (0.20),
+  funding_signal (0.10), drawdown_penalty (0.15) — see `src/scoring.py`.
+- Action thresholds in `cfg.crypto.scoring.thresholds`: STRONG >= 72,
+  WATCH >= 55, AVOID < 40 (otherwise WATCH).
+- Per-feature breakdown is persisted on `Candidate.extras["features"]`.
+- Legacy callers using `aggregate_strength=` and stub candidates with
+  `[-1, +1]` scores still work via auto-rescaling shims in passive,
+  aggressive, telegram, and risk.
+
 ## Where decisions come from
 
 ```
@@ -47,7 +60,7 @@ threshold is wider than the stock side's -5%.
    drawdown <= -15%: every decision is `BLOCK_BUY_RISK_EVENT`.
 2. **Universe.** Symbol must be in `cfg.universe.symbols`.
 3. **Score floor.** `score >= cfg.passive.min_accumulation_score` (default
-   0.30 on the [-1, +1] scale) AND `action != "AVOID"`.
+   50 on the 0-100 scale post 2026-05 migration) AND `action != "AVOID"`.
 4. **Dip qualifier.** `last / high30 - 1 <= -dip_threshold_pct` (default
    -8%). Without dip data, fall through to `WAIT_FOR_BETTER_PRICE` rather
    than auto-buying on missing inputs.
@@ -84,7 +97,8 @@ threshold is wider than the stock side's -5%.
 | `weekly_cap_total_usd`            | 1500    | scales with portfolio                  |
 | `dip_threshold_from_30d_high_pct` | 0.08    | sweep 0.05-0.12                        |
 | `drawdown_gate_pct`               | 0.15    | sweep 0.10-0.25                        |
-| `min_accumulation_score`          | 0.30    | aligned with WATCH/STRONG threshold    |
+| `min_accumulation_score`          | 50.0    | 0-100 scale; aligned with WATCH thr     |
+| `high_conviction_score_threshold` | 60.0    | 0-100 scale; permits add-tranche bonus |
 
 ## Aggressive rotation engine
 

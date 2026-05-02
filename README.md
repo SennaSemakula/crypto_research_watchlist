@@ -17,6 +17,12 @@ adapted for the 24/7 crypto market.
 - Hourly intra-day signal classification (STRONG / WATCH / AVOID) logged to `intraday_log/`.
 - Per-asset deep-dive notes in `research/assets/<SYMBOL>.md`.
 - Daily calibration evidence in `research_log/`.
+- 0-100 weighted feature score per candidate (momentum + volatility regime
+  + rel strength vs BTC + funding + drawdown). Action thresholds: STRONG >= 72,
+  WATCH >= 55, AVOID < 40.
+- News + sentiment pipeline (CryptoPanic, CoinDesk + CoinTelegraph RSS,
+  Reddit) with VADER scoring + crypto keyword booster. Surfaced in the
+  daily Telegram render as Active Catalysts and per-symbol headlines.
 
 ## What it is NOT
 

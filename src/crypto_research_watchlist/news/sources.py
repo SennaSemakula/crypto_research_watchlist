@@ -167,7 +167,7 @@ def fetch_cryptopanic(
 # RSS feeds (CoinDesk, CoinTelegraph)
 # ---------------------------------------------------------------------------
 
-COINDESK_RSS = "https://www.coindesk.com/arc/outboundfeeds/rss/"
+COINDESK_RSS = "https://www.coindesk.com/arc/outboundfeeds/rss"
 COINTELEGRAPH_RSS = "https://cointelegraph.com/rss"
 
 
