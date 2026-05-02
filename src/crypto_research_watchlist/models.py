@@ -131,6 +131,29 @@ class AggressiveDecision(Base):
     reasons: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class NewsArticle(Base):
+    """One row per ingested news headline. Dedup on URL.
+
+    Sentiment is precomputed at ingest so renderers can render quickly without
+    re-scoring. ``currencies_json`` is a JSON list of ticker symbols mentioned
+    (uppercase, no -USD suffix).
+    """
+
+    __tablename__ = "news_articles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(1024), nullable=False)
+    body: Mapped[str | None] = mapped_column(String(8192), nullable=True)
+    published_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    currencies_json: Mapped[list] = mapped_column(JSON, default=list)
+    sentiment_score: Mapped[float] = mapped_column(Float, default=0.0)
+    sentiment_label: Mapped[str] = mapped_column(String(16), default="neutral")
+    raw: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 class LearningSummaryRecord(Base):
     """Weekly digest snapshot. payload holds the full structured summary."""
 

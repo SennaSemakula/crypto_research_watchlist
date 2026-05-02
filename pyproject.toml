@@ -25,6 +25,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "SQLAlchemy>=2.0",
     "APScheduler>=3.10",
+    "feedparser>=6.0",
+    "nltk>=3.9",
 ]
 
 [project.optional-dependencies]
@@ -33,6 +35,7 @@ dev = [
     "pytest-cov>=4.1",
     "ruff>=0.4",
     "mypy>=1.10",
+    "responses>=0.25",
 ]
 
 [project.scripts]
@@ -51,7 +54,10 @@ ignore = ["E501", "B008", "B904", "B019", "C901"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra -q"
+addopts = "-ra -q -m \"not integration\""
+markers = [
+    "integration: live network integration tests, opt-in via -m integration",
+]
 
 [tool.mypy]
 python_version = "3.11"
