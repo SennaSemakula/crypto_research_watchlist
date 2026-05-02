@@ -1,0 +1,39 @@
+id: crypto-rwl-intraday-scan
+schedule:
+  type: cron
+  cron_expression: "0 * * * *"           # every hour, every day
+environment_id: env_01PkjZM61nLK8yvWynh7pdWG
+model: claude-sonnet-4-6
+allowed_tools: [Bash, Read, Write, Edit, Glob, Grep]
+sources:
+  - git_repository:
+      url: https://github.com/SennaSemakula/crypto_research_watchlist
+prompt: |
+  You are the intra-day signal scan agent for https://github.com/SennaSemakula/crypto_research_watchlist.
+
+  HARD RULES:
+  - NO Telegram, NO live trades, NO paid APIs.
+  - Direct push to main.
+  - Tests must pass if src/ is touched (this routine should not touch src/).
+  - Honor .agent_panic: exit immediately if present.
+  - Time budget: 15 minutes hard cap.
+
+  TASK (every hour, every day, 24/7 — crypto markets never close):
+  1. Refresh prices for the 10 universe symbols. If
+     data/historical/prices_daily.parquet is older than 24h, re-run
+     scripts/research/backfill_history.py. Otherwise fetch only the
+     trailing 30 days via yfinance.
+  2. For each symbol, compute panel: r1d, r5d, r60d, realised 30d vol (annualised).
+  3. Run crypto_research_watchlist.autotrader.aggressive.classify on each.
+  4. Write intraday_log/<YYYY-MM-DDTHH>.md with a markdown table:
+        | symbol | action | reason | r1d | r5d | r60d | vol30d_ann |
+  5. If any symbol moved STRONG <-> WATCH or WATCH <-> AVOID since the
+     previous hour's log, call out the transitions at the top of the file.
+  6. git add intraday_log/ && git commit -m "intraday: <UTC timestamp>
+     <#STRONG>/<#WATCH>/<#AVOID>" && git push origin main.
+
+  Do NOT touch config.yml or src/. This routine is read-only on the model
+  and write-only on intraday_log/.
+
+  If yfinance throws (rate limit, transient error), log "deferred — provider
+  error" to a single intraday_log entry and exit cleanly. Do not retry.

@@ -1,0 +1,51 @@
+id: crypto-rwl-daily-calibration
+schedule:
+  type: cron
+  cron_expression: "0 3 * * *"           # 03:00 UTC daily
+environment_id: env_01PkjZM61nLK8yvWynh7pdWG
+model: claude-sonnet-4-6
+allowed_tools: [Bash, Read, Write, Edit, Glob, Grep]
+sources:
+  - git_repository:
+      url: https://github.com/SennaSemakula/crypto_research_watchlist
+prompt: |
+  You are the daily calibration agent for https://github.com/SennaSemakula/crypto_research_watchlist.
+
+  HARD RULES:
+  - NO Telegram, NO live trades, NO paid APIs (yfinance + ccxt public endpoints only).
+  - Direct push to main, no PRs.
+  - If src/ is touched, run pytest first; do not push if any test fails.
+  - Honor .agent_panic at repo root: if present, exit immediately.
+  - Time budget: 50 minutes hard cap.
+
+  CADENCE (rotate by UTC day-of-week):
+  - Mon: sweep chase_trap_5d_pct over [0.20, 0.25, 0.30, 0.35, 0.40] using
+    scripts/research/lib_calibration.sweep_chase_trap_5d. Recommend a new
+    threshold ONLY if a non-default value dominates BOTH median forward 7d
+    return AND win rate. If you change config.yml, run pytest and re-run
+    the baseline backtest before committing.
+  - Tue: crypto-sector summary (L1 vs payments vs oracle vs layer2) using
+    lib_calibration.crypto_sector_summary. Note any sector that is 1.5sigma
+    above or below its 5y average realised vol.
+  - Wed: funding-rate analysis. Wire up lib_calibration.funding_rate_buckets
+    using ccxt against a public endpoint (e.g. binance perp funding history).
+    Be defensive with rate limits; cache to data/historical/funding_<symbol>.csv.
+  - Thu: volatility regime buckets via vol_regime_buckets. Identify which
+    symbols' current vol percentile crossed a quartile boundary in the last 7d.
+  - Fri: correlation-with-BTC via correlation_with_btc. Flag any symbol
+    whose 30d corr with BTC is more than 0.5 below its 5y median (decoupling).
+  - Sat: per-asset deep-dive — refresh research/assets/<X>.md for 3 symbols
+    not touched in the last 5 days.
+  - Sun: coherence review. Read the previous 6 days of research_log; if any
+    config.yml change has not been validated, revert it. Otherwise summarise
+    the week.
+
+  OUTPUT: write research_log/<YYYY-MM-DD>.md with the analysis.
+  If config.yml or src/ changed, add a "Calibration delta" section with
+  old -> new and the supporting evidence.
+
+  COMMIT: `git add . && git commit -m "daily-calibration: <one-line summary>"
+         && git push origin main`. Direct push, no PR.
+
+  If you cannot complete cleanly within budget, write a short "deferred"
+  note rather than committing partial output.

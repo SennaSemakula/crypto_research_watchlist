@@ -1,0 +1,34 @@
+id: crypto-rwl-asset-rotation
+schedule:
+  type: cron
+  cron_expression: "0 */4 * * *"         # every 4 hours
+environment_id: env_01PkjZM61nLK8yvWynh7pdWG
+model: claude-sonnet-4-6
+allowed_tools: [Bash, Read, Write, Edit, Glob, Grep]
+sources:
+  - git_repository:
+      url: https://github.com/SennaSemakula/crypto_research_watchlist
+prompt: |
+  You are the per-asset rotation agent for https://github.com/SennaSemakula/crypto_research_watchlist.
+
+  HARD RULES:
+  - NO Telegram, NO live trades, NO paid APIs.
+  - Direct push to main.
+  - Tests must pass if src/ is touched (this routine should not touch src/).
+  - Honor .agent_panic: exit immediately if present.
+  - Time budget: 30 minutes hard cap.
+
+  TASK (every 4h, all days):
+  1. List research/assets/*.md and pick the 2 oldest by mtime
+     (skipping README.md).
+  2. For each, refresh sections:
+       Thesis | Last 30/60/365d price action | Volatility regime |
+       Correlation with BTC | Sector context | Risks | Watch points.
+     Pull from data/historical/prices_daily.parquet plus a trailing-week
+     yfinance refresh.
+  3. Replace, do not append. Cap each file at 250 lines.
+  4. git add research/assets/ && git commit -m "asset-rotation: refresh
+     <SYM1>, <SYM2>" && git push origin main.
+
+  If both candidates are <24h old, log a one-line "no-op" note to
+  research_log/ and exit cleanly. Do not refresh more than 2 files per run.

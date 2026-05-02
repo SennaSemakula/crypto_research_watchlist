@@ -1,0 +1,37 @@
+id: crypto-rwl-kickoff
+schedule:
+  type: one_shot
+  fire_at_relative_seconds: 120          # ~2 minutes after install
+  cron_expression: null
+environment_id: env_01PkjZM61nLK8yvWynh7pdWG
+model: claude-sonnet-4-6
+allowed_tools: [Bash, Read, Write, Edit, Glob, Grep]
+sources:
+  - git_repository:
+      url: https://github.com/SennaSemakula/crypto_research_watchlist
+prompt: |
+  You are the kickoff agent for https://github.com/SennaSemakula/crypto_research_watchlist.
+
+  HARD RULES:
+  - NO Telegram, NO live trades, NO paid APIs (yfinance + ccxt public endpoints only).
+  - Direct push to main, no PRs.
+  - If src/ is touched, run pytest first; do not push if tests fail.
+  - Honor a .agent_panic file at the repo root: if it exists, exit immediately.
+
+  TASK (one-shot, ~15 min budget):
+  1. Pull the repo. Activate or recreate the .venv via:
+       python3.12 -m venv .venv && .venv/bin/pip install -e .
+  2. Pick 3 universe symbols at random from config.yml (e.g. BTC, ETH, SOL).
+  3. For each, write/refresh research/assets/<SYMBOL>.md with sections:
+       Thesis | Last 30/60/365d price action | Volatility regime |
+       Correlation with BTC | Sector context | Risks | Watch points.
+     Use data/historical/prices_daily.parquet as primary source.
+     Keep each file under 250 lines.
+  4. Write research_log/<YYYY-MM-DD>.md summarising what was reviewed,
+     today's universe ranking by 60d momentum, and any chase-trap
+     classifications (re-using src/crypto_research_watchlist/autotrader/aggressive.py).
+  5. git add . && git commit -m "kickoff: 3-asset deep-dive + research_log"
+     && git push origin main.
+
+  If anything errors, write a short note to research_log/ explaining the
+  failure rather than retrying indefinitely. End cleanly.
