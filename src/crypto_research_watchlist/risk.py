@@ -4,6 +4,9 @@ Mirrors the stock side's risk.py: produces a RiskVerdict with action label,
 position size cap, warnings, and invalidation conditions. Crypto-specific
 adjustments documented in docs/RESEARCH.md (no leverage, drawdown gate,
 stablecoin de-peg).
+
+Score is 0-100 post 2026-05 migration. Action thresholds come from
+``cfg.crypto.scoring.thresholds``.
 """
 
 from __future__ import annotations
@@ -27,23 +30,33 @@ class RiskVerdict:
 def classify(
     *,
     cfg: AppConfig,
-    aggregate_strength: float,
+    score: float | None = None,
     annualised_vol: float | None = None,
     drawdown_30d: float | None = None,
     portfolio_drawdown_30d: float | None = None,
     has_data: bool = True,
+    aggregate_strength: float | None = None,  # legacy [-1, +1] kw, kept for back-compat
 ) -> RiskVerdict:
-    """Produce a RiskVerdict from the aggregated signal strength + risk inputs.
+    """Produce a RiskVerdict from the 0-100 score + risk inputs.
 
-    aggregate_strength is bounded in [-1, +1].
-    annualised_vol is the symbol's realised vol (e.g. 1.0 = 100%).
-    portfolio_drawdown_30d is the rolling 30d portfolio drawdown (e.g. -0.2 = -20%).
+    Backward-compat: when called with ``aggregate_strength`` (legacy
+    [-1, +1] convention, e.g. older tests), we auto-rescale to 0-100.
+    Annual vol is fractional (1.0 = 100%); drawdown_30d is also
+    fractional and negative (e.g. -0.20 = -20%).
     """
     warnings: list[str] = []
     invalidations: list[str] = []
 
     if not has_data:
         return RiskVerdict("INSUFFICIENT_DATA", 0.0, ["Data unavailable"], ["Improve data coverage"], "n/a")
+
+    # Resolve score from either kw.
+    if score is None and aggregate_strength is not None:
+        # Legacy [-1, +1] -> [0, 100].
+        score = float(aggregate_strength) * 50.0 + 50.0
+    if score is None:
+        score = 50.0
+    score_100 = max(0.0, min(100.0, float(score)))
 
     risk = cfg.risk_limits
     if annualised_vol is not None and annualised_vol > risk.high_vol_threshold_annual:
@@ -63,20 +76,27 @@ def classify(
     invalidations.append("Stablecoin de-peg (USDT/USDC outside 0.997-1.003): freeze entries")
     invalidations.append("Exchange listing change or regulatory action against the underlying")
 
-    # Action label from aggregate strength + risk gates.
+    # Read thresholds from config when available; fall back to defaults.
+    try:
+        thr = cfg.crypto.scoring.thresholds
+        strong_thr = float(thr.strong)
+        watch_thr = float(thr.watchlist)
+        avoid_thr = float(thr.avoid)
+    except Exception:
+        strong_thr, watch_thr, avoid_thr = 72.0, 55.0, 40.0
+
     if drawdown_gate_tripped:
         label = "AVOID"
-    elif aggregate_strength >= 0.6:
+    elif score_100 >= strong_thr:
         label = "STRONG"
-    elif aggregate_strength >= 0.3:
+    elif score_100 >= watch_thr:
         label = "WATCH"
-    elif aggregate_strength <= -0.3:
+    elif score_100 < avoid_thr:
         label = "AVOID"
     else:
         label = "WATCH"
 
     base_weight = risk.max_portfolio_weight_single_name
-    # Down-size when warnings exist or vol is high.
     size_mult = 1.0
     if warnings:
         size_mult *= 0.6
@@ -84,9 +104,9 @@ def classify(
         size_mult *= 0.5
     max_weight = round(base_weight * size_mult, 4)
 
-    if aggregate_strength >= 0.6:
+    if score_100 >= strong_thr:
         horizon = "2-8 weeks"
-    elif aggregate_strength >= 0.3:
+    elif score_100 >= watch_thr:
         horizon = "1-4 weeks"
     else:
         horizon = "n/a"

@@ -36,8 +36,8 @@ class PassiveConfig(BaseModel):
     weekly_cap_total_usd: float = 1500.0
     dip_threshold_from_30d_high_pct: float = 0.08
     drawdown_gate_pct: float = 0.15
-    min_accumulation_score: float = 0.30
-    high_conviction_score_threshold: float = 0.60
+    min_accumulation_score: float = 50.0
+    high_conviction_score_threshold: float = 60.0
 
 
 class LearningSummaryConfig(BaseModel):
@@ -68,6 +68,25 @@ class UniverseConfig(BaseModel):
     min_market_cap_usd: int = 1_000_000_000
 
 
+class ScoringWeights(BaseModel):
+    momentum: float = 0.35
+    volatility_regime: float = 0.20
+    rel_strength_vs_btc: float = 0.20
+    funding_signal: float = 0.10
+    drawdown_penalty: float = 0.15
+
+
+class ScoringThresholds(BaseModel):
+    strong: float = 72.0
+    watchlist: float = 55.0
+    avoid: float = 40.0
+
+
+class ScoringConfig(BaseModel):
+    weights: ScoringWeights = ScoringWeights()
+    thresholds: ScoringThresholds = ScoringThresholds()
+
+
 class CryptoConfig(BaseModel):
     """Top-level config. Loaded from config.yml at the repo root."""
 
@@ -77,6 +96,7 @@ class CryptoConfig(BaseModel):
     learning_summary: LearningSummaryConfig = LearningSummaryConfig()
     risk_limits: RiskLimits = RiskLimits()
     backtesting: BacktestingConfig = BacktestingConfig()
+    scoring: ScoringConfig = ScoringConfig()
 
 
 def load_config(path: Path | str | None = None) -> CryptoConfig:
@@ -84,6 +104,11 @@ def load_config(path: Path | str | None = None) -> CryptoConfig:
     if path is None:
         path = Path(__file__).resolve().parents[3] / "config.yml"
     raw = yaml.safe_load(Path(path).read_text())
+    scoring_raw = raw.get("scoring") or {}
+    scoring = ScoringConfig(
+        weights=ScoringWeights(**(scoring_raw.get("weights") or {})),
+        thresholds=ScoringThresholds(**(scoring_raw.get("thresholds") or {})),
+    )
     return CryptoConfig(
         universe=UniverseConfig(**raw["universe"]),
         aggressive=AggressiveConfig(**(raw.get("aggressive") or {})),
@@ -91,4 +116,5 @@ def load_config(path: Path | str | None = None) -> CryptoConfig:
         learning_summary=LearningSummaryConfig(**(raw.get("learning_summary") or {})),
         risk_limits=RiskLimits(**(raw.get("risk_limits") or {})),
         backtesting=BacktestingConfig(**(raw.get("backtesting") or {})),
+        scoring=scoring,
     )

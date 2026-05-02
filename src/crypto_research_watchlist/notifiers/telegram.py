@@ -114,10 +114,15 @@ def _fmt_pct(p: float | None, label: str) -> str:
 def _render_candidate(idx: int, c) -> list[str]:
     out: list[str] = []
     emoji = _ACTION_EMOJI.get(c.action, "•")
-    score_pct = int(round((c.score + 1) * 50))
+    # Score is 0-100 post 2026-05 migration. Older fixtures using [-1, +1]
+    # are auto-detected and rescaled.
+    raw = float(c.score or 0.0)
+    if -1.5 <= raw <= 1.5:
+        raw = (raw + 1.0) * 50.0
+    score_pct = int(round(max(0.0, min(100.0, raw))))
     px = (c.extras.get("px") or {}) if c.extras else {}
 
-    header_parts = [f"{emoji} <b>{idx}. {_escape(c.symbol)}</b> [{c.action}] · {score_pct}/100 ({c.score:+.2f})"]
+    header_parts = [f"{emoji} <b>{idx}. {_escape(c.symbol)}</b> [{c.action}] · {score_pct}/100"]
     if px.get("last") is not None:
         moves = []
         if px.get("p1d") is not None:

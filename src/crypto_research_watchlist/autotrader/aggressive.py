@@ -118,9 +118,17 @@ def _panel_for_candidate(c: Any) -> dict:
 
 
 def _candidate_score_pct(c: Any) -> float:
-    """Map candidate score [-1, +1] to a 0-100 scale used by the gap check."""
+    """Return the candidate score on a 0-100 scale.
+
+    Post 2026-05 migration the candidate score is already 0-100. We still
+    accept legacy [-1, +1] inputs (from old call sites or tests) by
+    detecting magnitude <= 1.5 and rescaling.
+    """
     raw = float(getattr(c, "score", 0.0) or 0.0)
-    return max(0.0, min(100.0, (raw + 1.0) * 50.0))
+    if -1.5 <= raw <= 1.5:
+        # Looks like the legacy [-1, +1] convention.
+        raw = (raw + 1.0) * 50.0
+    return max(0.0, min(100.0, raw))
 
 
 def build_aggressive_context(

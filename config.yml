@@ -68,8 +68,8 @@ passive:
   weekly_cap_total_usd: 1500           # max total USD across all names per week
   dip_threshold_from_30d_high_pct: 0.08  # buy-the-dip trigger: -8% from 30d high
   drawdown_gate_pct: 0.15              # block new buys if 30d portfolio drawdown <= -15%
-  min_accumulation_score: 0.30         # score floor for any buy (signal strength scale [-1, +1])
-  high_conviction_score_threshold: 0.60  # score >= this = high-conviction; permits add-tranche bonus
+  min_accumulation_score: 50.0         # score floor for any buy (0-100 scale, post 2026-05 migration)
+  high_conviction_score_threshold: 60.0  # score >= this = high-conviction; permits add-tranche bonus
 
 learning_summary:
   weeks_back_default: 1                # default weeks-back window for the weekly digest

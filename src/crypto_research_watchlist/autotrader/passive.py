@@ -213,7 +213,12 @@ def evaluate(
         symbol = (getattr(c, "symbol", "") or "").upper()
         if not symbol:
             continue
-        score = float(getattr(c, "score", 0.0) or 0.0)
+        score_raw = float(getattr(c, "score", 0.0) or 0.0)
+        # Auto-detect legacy [-1, +1] scoring (older fixtures, calibration
+        # back-tests) and rescale to 0-100 to match config thresholds.
+        score = score_raw if score_raw > 1.5 or score_raw < -1.5 else (score_raw + 1.0) * 50.0
+        # Floor / cap.
+        score = max(0.0, min(100.0, score))
         action_label = getattr(c, "action", "") or ""
 
         if portfolio_blocked:
@@ -238,8 +243,8 @@ def evaluate(
             report.decisions.append(_decision(
                 action=PassiveAction.DO_NOT_BUY, symbol=symbol, score=score,
                 reasons=[
-                    f"score {score:+.2f} or action {action_label or '-'} "
-                    f"below floor {pcfg.min_accumulation_score:+.2f}",
+                    f"score {score:.1f}/100 or action {action_label or '-'} "
+                    f"below floor {pcfg.min_accumulation_score:.1f}",
                 ],
             ))
             continue
@@ -308,7 +313,7 @@ def evaluate(
             else PassiveAction.AUTO_BUY_FIRST_TRANCHE
         )
         reasons = [
-            f"score {score:+.2f} >= floor {pcfg.min_accumulation_score:+.2f}"
+            f"score {score:.1f}/100 >= floor {pcfg.min_accumulation_score:.1f}"
             + (" (high-conviction)" if high_conv else ""),
             f"dip from 30d high {dip * 100:+.1f}% <= "
             f"-{abs(pcfg.dip_threshold_from_30d_high_pct) * 100:.1f}% threshold",
