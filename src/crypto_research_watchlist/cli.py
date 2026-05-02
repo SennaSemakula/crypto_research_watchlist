@@ -57,7 +57,44 @@ def cli_run(
     cfg = load_app_config()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url) if persist else None
-    result = run_once(cfg=cfg, engine=engine, write_report=write_report)
+
+    # Wire the real free-tier providers. Each one is fail-safe: any
+    # exception inside a loader returns None / [] / {} and the corresponding
+    # signal stays neutral.
+    from .data.funding_provider import FundingRateProvider
+    from .data.onchain_provider import OnChainProvider
+    from .data.openinterest_provider import OpenInterestProvider
+
+    fp = FundingRateProvider()
+    oip = OpenInterestProvider()
+    ocp = OnChainProvider()
+
+    def _funding_loader(symbol: str):
+        try:
+            return fp.last_24h(symbol)
+        except Exception:
+            return None
+
+    def _oi_loader(symbol: str):
+        try:
+            return oip.fetch(symbol)
+        except Exception:
+            return {}
+
+    def _onchain_loader(symbol: str):
+        try:
+            snap = ocp.fetch(symbol)
+            return {
+                "active_addresses_z": snap.active_addresses_z,
+                "exchange_netflow_usd_7d": snap.exchange_netflow_usd_7d,
+            }
+        except Exception:
+            return {}
+
+    result = run_once(
+        cfg=cfg, engine=engine, write_report=write_report,
+        funding_loader=_funding_loader, oi_loader=_oi_loader, onchain_loader=_onchain_loader,
+    )
     top = result.candidates[: cfg.reports.top_n_terminal]
     typer.echo(f"run_at={result.run_at.isoformat()}")
     for idx, c in enumerate(top, 1):
