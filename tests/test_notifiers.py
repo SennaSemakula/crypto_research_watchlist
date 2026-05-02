@@ -32,4 +32,4 @@ def test_render_html_includes_top_candidates():
     assert "[STRONG]" in html
     assert "ETH-USD" in html
     assert "Crypto Daily Watchlist" in html
-    assert "Ranked candidates" in html
+    assert "RANKED CANDIDATES" in html

@@ -105,7 +105,7 @@ def cli_run(
     if send_telegram:
         from .notifiers.telegram import TelegramNotifier
         cfg.notifications.telegram = True
-        outcome = TelegramNotifier(cfg, env).send(result)
+        outcome = TelegramNotifier(cfg, env, engine=engine).send(result)
         typer.echo(f"telegram: status={outcome.status} error={outcome.error or '-'}")
         if outcome.status in {"failed", "partial"}:
             raise typer.Exit(code=1)
@@ -194,7 +194,7 @@ def cli_passive(
         )
     if send_telegram:
         from .notifiers.passive_notifier import send_passive_telegram
-        ok = send_passive_telegram(report)
+        ok = send_passive_telegram(report, daily_mode=True)
         typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
 
 

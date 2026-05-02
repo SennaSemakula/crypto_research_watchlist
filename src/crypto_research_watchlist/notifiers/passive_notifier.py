@@ -58,23 +58,52 @@ def _format_decision(d: PassiveDecision) -> str:
     return f"{header}\n{body}"
 
 
-def format_report(report: PassiveReport) -> str:
+def format_report(report: PassiveReport, *, daily_mode: bool = False) -> str:
     """Render a PassiveReport as a Telegram-ready HTML message.
 
-    Returns an empty string when no decision is actionable, so quiet runs
-    don't push a notification.
+    Behaviour:
+    - daily_mode=False (legacy): returns empty string when no decision is
+      actionable, so the cron-driven shadow run can stay quiet.
+    - daily_mode=True: ALWAYS returns a formatted message. When no buys
+      are actionable today the message explains why concisely
+      ("0 buys today: top 3 candidates X/Y/Z below buy floor; revisit if
+      any drops Z%").
     """
-    if not report.decisions and not report.notes:
-        return ""
     has_actionable = any(d.action in _ACTIONABLE for d in report.decisions)
-    if not has_actionable and not report.notes:
-        return ""
+    if not daily_mode:
+        if not report.decisions and not report.notes:
+            return ""
+        if not has_actionable and not report.notes:
+            return ""
 
     mode_tag = "[SHADOW]" if report.shadow_mode else "[LIVE]"
     header = (
         f"🤖 <b>CRYPTO AUTO-INVESTOR {mode_tag}</b> | "
         f"{len(report.decisions)} decision(s)"
     )
+
+    if daily_mode and not has_actionable:
+        # Friendly never-quiet summary.
+        # Sort decisions by score descending and surface top 3 names + scores.
+        ranked = sorted(
+            report.decisions,
+            key=lambda d: -float(d.accumulation_score or 0.0),
+        )[:3]
+        names = ", ".join(
+            f"{_esc(d.symbol)} ({float(d.accumulation_score or 0.0):.1f})"
+            for d in ranked
+        ) or "-"
+        explainer = (
+            f"0 buys today: top candidates {names} below buy floor. "
+            f"Revisit when score crosses the threshold or a deeper dip prints."
+        )
+        body = explainer
+        notes = ""
+        if report.notes:
+            notes = "\n\n<i>Notes:</i>\n" + "\n".join(
+                f"   · {_esc(n)}" for n in report.notes[:5]
+            )
+        return f"{header}\n\n{body}{notes}"
 
     ordered = sorted(
         report.decisions,
@@ -94,13 +123,16 @@ def format_report(report: PassiveReport) -> str:
     return full
 
 
-def send_passive_telegram(report: PassiveReport, *, http=None) -> bool:
+def send_passive_telegram(report: PassiveReport, *, http=None, daily_mode: bool = False) -> bool:
     """Post a formatted passive report via the Telegram Bot API.
 
-    Returns True on success, False otherwise. Never raises. ``http``
-    accepts an httpx-shaped client for tests; defaults to httpx.
+    ``daily_mode=True`` forces a never-quiet send (the daily cron always
+    wants a message). ``daily_mode=False`` preserves the older quiet-by-
+    default semantics (used by intraday cron checks).
+
+    Returns True on success, False otherwise. Never raises.
     """
-    text = format_report(report)
+    text = format_report(report, daily_mode=daily_mode)
     if not text:
         logger.info("passive-notifier: empty report — skipping send")
         return False

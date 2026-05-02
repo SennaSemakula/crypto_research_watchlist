@@ -105,6 +105,26 @@ def test_send_skipped_when_disabled(monkeypatch):
     http.post.assert_not_called()
 
 
+def test_daily_mode_never_quiet_with_no_actionable():
+    """daily_mode forces a message even when nothing is actionable."""
+    report = PassiveReport(decisions=[
+        _decision(action=PassiveAction.WAIT_FOR_BETTER_PRICE, symbol="BTC-USD", score=45.0),
+        _decision(action=PassiveAction.DO_NOT_BUY, symbol="ETH-USD", score=30.0),
+    ])
+    text = format_report(report, daily_mode=True)
+    assert text != ""
+    assert "0 buys" in text or "below buy floor" in text
+    assert "BTC-USD" in text
+
+
+def test_daily_mode_actionable_still_renders():
+    """daily_mode does not change the actionable path."""
+    report = PassiveReport(decisions=[_decision()], shadow_mode=True)
+    text = format_report(report, daily_mode=True)
+    assert "CRYPTO AUTO-INVESTOR" in text
+    assert "BTC-USD" in text
+
+
 def test_send_skipped_without_creds(monkeypatch):
     # _clean_env fixture clears these, so explicit unset.
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
