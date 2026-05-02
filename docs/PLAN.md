@@ -74,6 +74,51 @@ Tests:
 - `tests/test_pipeline.py` — run_once on sample data produces a non-empty RunResult
 - `tests/test_notifiers.py` — disabled by default; HTML escaping correct
 
+## Phase B/C/D status update (2026-05-02)
+
+Operational architecture brought to parity with the stock sibling.
+
+**Decision engine — DONE**
+- `autotrader/passive.py`: passive accumulation engine. PassiveAction enum,
+  PassiveDecision, PassiveReport, evaluate(), run_once_passive(). Crypto-tuned
+  gates: dip threshold from 30d high (default -8%), weekly cap per symbol /
+  total, drawdown gate, stablecoin de-peg block. Shadow-only in v1.
+- `autotrader/aggressive.py`: rotation engine extended. Existing classify /
+  rotate_decision primitives preserved; added AggressiveAction, AggressiveDecision,
+  AggressiveReport, evaluate_aggressive(), run_once_aggressive(). Chase-trap
+  gate (5d > 30%, 1d > 18%), rank-drop and score-gap rotation, post-trap cooldown.
+- `autotrader/order_supervisor.py`: paper-broker reconciliation. Detects
+  decisions without positions and positions without decision audit trail.
+- `autotrader/learning_summary.py`: weekly digest. Decision counts, hit-rate
+  back-eval against parquet, score-distribution shift, top realised moves.
+
+**Notifiers — DONE**
+- `notifiers/passive_notifier.py`: quiet-by-default Telegram render.
+- `notifiers/aggressive_notifier.py`: long-form Telegram render with ATR
+  buy / target / stop zones reused from the existing telegram.py renderer.
+
+**Persistence — DONE**
+- `models.py` adds passive_decisions, aggressive_decisions, learning_summaries.
+
+**CLI — DONE**
+- `passive`, `aggressive`, `supervise`, `learning-summary` subcommands all
+  with optional `--send-telegram`.
+
+**GH Actions — DONE**
+- `.github/workflows/passive-daily.yml` (14:00 UTC daily)
+- `.github/workflows/aggressive-overnight.yml` (22:00 UTC weekdays)
+- `.github/workflows/learning-summary.yml` (Sunday 18:00 UTC)
+
+**Calibration — DONE**
+- `scripts/research/calibration_sweep.py`: grid sweeps chase-trap, rotation
+  gap, dip threshold over the parquet history. Writes JSON to
+  `data/historical/calibration_<date>.json`.
+
+**Tests — DONE**
+- 47 new tests added (98 total): test_passive, test_aggressive,
+  test_supervisor, test_learning_summary, test_notifier_passive,
+  test_notifier_aggressive, test_calibration_sweep.
+
 ## Phase E — backfill + walk-forward calibration (next session)
 
 Already partly done: 5y daily OHLCV is present. Still TODO:
