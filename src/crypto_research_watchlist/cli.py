@@ -1,10 +1,14 @@
 """Typer CLI: thin wrapper over the pipeline.
 
 Subcommands:
-  init-db       Create the SQLite schema (idempotent).
-  run           Run the pipeline once and write a markdown watchlist.
-  candidates    Print the latest run's ranked candidates to stdout.
-  paper-status  Show paper portfolio cash + positions.
+  init-db           Create the SQLite schema (idempotent).
+  run               Run the pipeline once and write a markdown watchlist.
+  candidates        Print the latest run's ranked candidates to stdout.
+  paper-status      Show paper portfolio cash + positions.
+  passive           Run the passive accumulation engine, optionally Telegram.
+  aggressive        Run the aggressive rotation engine, optionally Telegram.
+  supervise         Reconcile paper-broker state with system state.
+  learning-summary  Weekly digest of decisions + back-evaluated hit rate.
 """
 
 from __future__ import annotations
@@ -101,6 +105,155 @@ def cli_paper_status() -> None:
             if p.quantity == 0:
                 continue
             typer.echo(f"{p.symbol:10s} qty={p.quantity:.6f} avg=${p.avg_price:.2f} realised=${p.realised_pnl:.2f}")
+
+
+@app.command("passive")
+def cli_passive(
+    send_telegram: bool = typer.Option(False, "--send-telegram", help="POST report to Telegram."),
+) -> None:
+    """Run the passive accumulation engine on the latest pipeline result."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    cfg = load_app_config()
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+    result = run_once(cfg=cfg, engine=engine, write_report=False)
+
+    from .autotrader.passive import run_once_passive
+    from .autotrader.paper_broker import PaperBroker
+
+    def _quote(symbol: str) -> float | None:
+        for c in result.candidates:
+            if c.symbol == symbol:
+                px = (c.extras.get("px") or {}) if c.extras else {}
+                return px.get("last")
+        return None
+
+    broker = PaperBroker(
+        engine=engine, quote_fn=_quote,
+        starting_cash=cfg.portfolio.cash_available_usd,
+    )
+    report = run_once_passive(engine=engine, cfg=cfg, run_result=result, broker=broker)
+    typer.echo(
+        f"passive: {len(report.decisions)} decision(s) "
+        f"(buys={report.buys_placed} adds={report.add_tranches_placed} "
+        f"shadow={report.shadow_buys} blocked={report.blocked} "
+        f"errors={report.errors})"
+    )
+    for d in report.decisions:
+        size = f" ${d.tranche_usd:.2f}" if d.tranche_usd else ""
+        typer.echo(
+            f"  {d.action.value:24s} {d.symbol:10s} score={d.accumulation_score:+.2f}{size}"
+        )
+    if send_telegram:
+        from .notifiers.passive_notifier import send_passive_telegram
+        ok = send_passive_telegram(report)
+        typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
+
+
+@app.command("aggressive")
+def cli_aggressive(
+    held_symbol: str = typer.Option(None, "--held-symbol"),
+    held_rank_at_entry: int = typer.Option(None, "--held-rank-at-entry"),
+    send_telegram: bool = typer.Option(False, "--send-telegram"),
+) -> None:
+    """Run the aggressive rotation engine."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    cfg = load_app_config()
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+    result = run_once(cfg=cfg, engine=engine, write_report=False)
+
+    from .autotrader.aggressive import run_once_aggressive
+
+    report = run_once_aggressive(
+        engine=engine, cfg=cfg.crypto, run_result=result,
+        held_symbol=held_symbol, held_rank_at_entry=held_rank_at_entry,
+    )
+    typer.echo(f"aggressive: {len(report.decisions)} decision(s)")
+    for d in report.decisions:
+        typer.echo(f"  {d.action.value:18s} {d.symbol:10s} score={d.score:+.2f}")
+    if send_telegram:
+        from .notifiers.aggressive_notifier import send_aggressive_telegram
+        ok = send_aggressive_telegram(report, result)
+        typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
+
+
+@app.command("supervise")
+def cli_supervise(
+    send_telegram: bool = typer.Option(False, "--send-telegram"),
+    lookback_hours: int = typer.Option(48, "--lookback-hours"),
+) -> None:
+    """Reconcile paper-broker state with decision audit trail."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+    cfg = load_app_config()
+
+    from .autotrader.order_supervisor import format_supervisor_message, reconcile
+    from .autotrader.paper_broker import PaperBroker
+
+    broker = PaperBroker(
+        engine=engine, quote_fn=lambda _s: None,
+        starting_cash=cfg.portfolio.cash_available_usd,
+    )
+    report = reconcile(engine=engine, broker=broker, lookback_hours=lookback_hours)
+    typer.echo(
+        f"supervisor: cash=${report.cash_usd:,.2f} positions={report.positions_count} "
+        f"reconciled={report.reconciled} mismatches={report.mismatches}"
+    )
+    for w in report.warnings:
+        typer.echo(f"  {w}")
+    if send_telegram and report.warnings:
+        text = format_supervisor_message(report)
+        if text:
+            import os
+
+            import httpx
+            token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+            chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+            if token and chat_id and os.environ.get("TELEGRAM_ENABLED", "true").lower() not in ("false", "0", "no"):
+                try:
+                    httpx.post(
+                        f"https://api.telegram.org/bot{token}/sendMessage",
+                        json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"},
+                        timeout=15.0,
+                    ).raise_for_status()
+                    typer.echo("telegram: sent")
+                except Exception as exc:
+                    typer.echo(f"telegram: failed: {exc}")
+
+
+@app.command("learning-summary")
+def cli_learning_summary(
+    weeks_back: int = typer.Option(1, "--weeks-back"),
+    send_telegram: bool = typer.Option(False, "--send-telegram"),
+    write_markdown: bool = typer.Option(True, "--write-markdown/--no-write-markdown"),
+) -> None:
+    """Weekly digest of decisions + hit-rate back-evaluation."""
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+
+    from .autotrader.learning_summary import (
+        build_weekly_summary,
+        persist_summary,
+        send_learning_telegram,
+        write_markdown_report,
+    )
+
+    summary = build_weekly_summary(engine=engine, weeks_back=weeks_back)
+    typer.echo(
+        f"learning-summary: passive={sum(summary.passive_action_counts.values())} "
+        f"aggressive={sum(summary.aggressive_action_counts.values())} "
+        f"hit_rate={summary.hit_rate_pct} (n={summary.hit_rate_n})"
+    )
+    persist_summary(engine, summary)
+    if write_markdown:
+        path = write_markdown_report(summary)
+        typer.echo(f"markdown: {path}")
+    if send_telegram:
+        ok = send_learning_telegram(summary)
+        typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
 
 
 def main() -> None:
