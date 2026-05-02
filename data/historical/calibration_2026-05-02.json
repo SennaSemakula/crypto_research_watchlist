@@ -1,0 +1,825 @@
+{
+  "generated_at": "2026-05-02T18:34:02.929140Z",
+  "n_grid_points": 90,
+  "best": {
+    "chase_trap_5d_pct": 0.25,
+    "rotation_score_gap": 10.0,
+    "dip_threshold_from_30d_high_pct": 0.05,
+    "n_picks": 1712,
+    "median_fwd_7d_pct": -0.38626973902932127,
+    "mean_fwd_7d_pct": 1.147900591526451,
+    "win_rate_pct": 3.711293260473588
+  },
+  "results": [
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1706,
+      "median_fwd_7d_pct": -0.3636527476236273,
+      "mean_fwd_7d_pct": 1.0853890772745673,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1684,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.9772306551238316,
+      "win_rate_pct": 3.642987249544627
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1664,
+      "median_fwd_7d_pct": -0.6887337135273564,
+      "mean_fwd_7d_pct": 0.8307327199415784,
+      "win_rate_pct": 3.54735883424408
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1649,
+      "median_fwd_7d_pct": -0.6922253069433837,
+      "mean_fwd_7d_pct": 0.7480086498506401,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1596,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.6417384492753986,
+      "win_rate_pct": 3.4471766848816032
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1525,
+      "median_fwd_7d_pct": -0.7144295228618369,
+      "mean_fwd_7d_pct": 0.28798051908760514,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1706,
+      "median_fwd_7d_pct": -0.3636527476236273,
+      "mean_fwd_7d_pct": 1.0853890772745673,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1684,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.9772306551238316,
+      "win_rate_pct": 3.642987249544627
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1664,
+      "median_fwd_7d_pct": -0.6887337135273564,
+      "mean_fwd_7d_pct": 0.8307327199415784,
+      "win_rate_pct": 3.54735883424408
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1649,
+      "median_fwd_7d_pct": -0.6922253069433837,
+      "mean_fwd_7d_pct": 0.7480086498506401,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1596,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.6417384492753986,
+      "win_rate_pct": 3.4471766848816032
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1525,
+      "median_fwd_7d_pct": -0.7144295228618369,
+      "mean_fwd_7d_pct": 0.28798051908760514,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1706,
+      "median_fwd_7d_pct": -0.3636527476236273,
+      "mean_fwd_7d_pct": 1.0853890772745673,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1684,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.9772306551238316,
+      "win_rate_pct": 3.642987249544627
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1664,
+      "median_fwd_7d_pct": -0.6887337135273564,
+      "mean_fwd_7d_pct": 0.8307327199415784,
+      "win_rate_pct": 3.54735883424408
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1649,
+      "median_fwd_7d_pct": -0.6922253069433837,
+      "mean_fwd_7d_pct": 0.7480086498506401,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1596,
+      "median_fwd_7d_pct": -0.5668068529258163,
+      "mean_fwd_7d_pct": 0.6417384492753986,
+      "win_rate_pct": 3.4471766848816032
+    },
+    {
+      "chase_trap_5d_pct": 0.2,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1525,
+      "median_fwd_7d_pct": -0.7144295228618369,
+      "mean_fwd_7d_pct": 0.28798051908760514,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1712,
+      "median_fwd_7d_pct": -0.38626973902932127,
+      "mean_fwd_7d_pct": 1.147900591526451,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1690,
+      "median_fwd_7d_pct": -0.6004312073848661,
+      "mean_fwd_7d_pct": 1.0168864533843567,
+      "win_rate_pct": 3.6338797814207653
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1670,
+      "median_fwd_7d_pct": -0.7516926163676774,
+      "mean_fwd_7d_pct": 0.8704611924389322,
+      "win_rate_pct": 3.538251366120219
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1655,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.75648019271683,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1602,
+      "median_fwd_7d_pct": -0.576576026710307,
+      "mean_fwd_7d_pct": 0.6430351728299399,
+      "win_rate_pct": 3.4380692167577416
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1533,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.3396021586417522,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1712,
+      "median_fwd_7d_pct": -0.38626973902932127,
+      "mean_fwd_7d_pct": 1.147900591526451,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1690,
+      "median_fwd_7d_pct": -0.6004312073848661,
+      "mean_fwd_7d_pct": 1.0168864533843567,
+      "win_rate_pct": 3.6338797814207653
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1670,
+      "median_fwd_7d_pct": -0.7516926163676774,
+      "mean_fwd_7d_pct": 0.8704611924389322,
+      "win_rate_pct": 3.538251366120219
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1655,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.75648019271683,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1602,
+      "median_fwd_7d_pct": -0.576576026710307,
+      "mean_fwd_7d_pct": 0.6430351728299399,
+      "win_rate_pct": 3.4380692167577416
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1533,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.3396021586417522,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1712,
+      "median_fwd_7d_pct": -0.38626973902932127,
+      "mean_fwd_7d_pct": 1.147900591526451,
+      "win_rate_pct": 3.711293260473588
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1690,
+      "median_fwd_7d_pct": -0.6004312073848661,
+      "mean_fwd_7d_pct": 1.0168864533843567,
+      "win_rate_pct": 3.6338797814207653
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1670,
+      "median_fwd_7d_pct": -0.7516926163676774,
+      "mean_fwd_7d_pct": 0.8704611924389322,
+      "win_rate_pct": 3.538251366120219
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1655,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.75648019271683,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1602,
+      "median_fwd_7d_pct": -0.576576026710307,
+      "mean_fwd_7d_pct": 0.6430351728299399,
+      "win_rate_pct": 3.4380692167577416
+    },
+    {
+      "chase_trap_5d_pct": 0.25,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1533,
+      "median_fwd_7d_pct": -0.7881378787869042,
+      "mean_fwd_7d_pct": 0.3396021586417522,
+      "win_rate_pct": 3.2468123861566487
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1713,
+      "median_fwd_7d_pct": -0.4878528891944678,
+      "mean_fwd_7d_pct": 1.1128554803391986,
+      "win_rate_pct": 3.6839708561020035
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1692,
+      "median_fwd_7d_pct": -0.6641693248871761,
+      "mean_fwd_7d_pct": 1.0099417424822537,
+      "win_rate_pct": 3.6111111111111107
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1672,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8566209835222793,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1657,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7443655233560484,
+      "win_rate_pct": 3.483606557377049
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1604,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 0.6241386723520042,
+      "win_rate_pct": 3.415300546448088
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1535,
+      "median_fwd_7d_pct": -0.8458453275415945,
+      "mean_fwd_7d_pct": 0.33140037347919205,
+      "win_rate_pct": 3.228597449908925
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1713,
+      "median_fwd_7d_pct": -0.4878528891944678,
+      "mean_fwd_7d_pct": 1.1128554803391986,
+      "win_rate_pct": 3.6839708561020035
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1692,
+      "median_fwd_7d_pct": -0.6641693248871761,
+      "mean_fwd_7d_pct": 1.0099417424822537,
+      "win_rate_pct": 3.6111111111111107
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1672,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8566209835222793,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1657,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7443655233560484,
+      "win_rate_pct": 3.483606557377049
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1604,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 0.6241386723520042,
+      "win_rate_pct": 3.415300546448088
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1535,
+      "median_fwd_7d_pct": -0.8458453275415945,
+      "mean_fwd_7d_pct": 0.33140037347919205,
+      "win_rate_pct": 3.228597449908925
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1713,
+      "median_fwd_7d_pct": -0.4878528891944678,
+      "mean_fwd_7d_pct": 1.1128554803391986,
+      "win_rate_pct": 3.6839708561020035
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1692,
+      "median_fwd_7d_pct": -0.6641693248871761,
+      "mean_fwd_7d_pct": 1.0099417424822537,
+      "win_rate_pct": 3.6111111111111107
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1672,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8566209835222793,
+      "win_rate_pct": 3.5109289617486343
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1657,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7443655233560484,
+      "win_rate_pct": 3.483606557377049
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1604,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 0.6241386723520042,
+      "win_rate_pct": 3.415300546448088
+    },
+    {
+      "chase_trap_5d_pct": 0.3,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1535,
+      "median_fwd_7d_pct": -0.8458453275415945,
+      "mean_fwd_7d_pct": 0.33140037347919205,
+      "win_rate_pct": 3.228597449908925
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1714,
+      "median_fwd_7d_pct": -0.431693614067985,
+      "mean_fwd_7d_pct": 1.1411915130977537,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1714,
+      "median_fwd_7d_pct": -0.431693614067985,
+      "mean_fwd_7d_pct": 1.1411915130977537,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1714,
+      "median_fwd_7d_pct": -0.431693614067985,
+      "mean_fwd_7d_pct": 1.1411915130977537,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.35,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1715,
+      "median_fwd_7d_pct": -0.42522053035430885,
+      "mean_fwd_7d_pct": 1.140293016408374,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 10.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1715,
+      "median_fwd_7d_pct": -0.42522053035430885,
+      "mean_fwd_7d_pct": 1.140293016408374,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 15.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.05,
+      "n_picks": 1715,
+      "median_fwd_7d_pct": -0.42522053035430885,
+      "mean_fwd_7d_pct": 1.140293016408374,
+      "win_rate_pct": 3.697632058287796
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.06,
+      "n_picks": 1694,
+      "median_fwd_7d_pct": -0.6385873062027092,
+      "mean_fwd_7d_pct": 1.0178071955559809,
+      "win_rate_pct": 3.624772313296903
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.07,
+      "n_picks": 1674,
+      "median_fwd_7d_pct": -0.8823598427126655,
+      "mean_fwd_7d_pct": 0.8647561235233515,
+      "win_rate_pct": 3.524590163934426
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.08,
+      "n_picks": 1659,
+      "median_fwd_7d_pct": -0.8916497630380271,
+      "mean_fwd_7d_pct": 0.7527009470080276,
+      "win_rate_pct": 3.4972677595628414
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.1,
+      "n_picks": 1606,
+      "median_fwd_7d_pct": -0.6174545335839776,
+      "mean_fwd_7d_pct": 0.6328796519170804,
+      "win_rate_pct": 3.4289617486338795
+    },
+    {
+      "chase_trap_5d_pct": 0.4,
+      "rotation_score_gap": 20.0,
+      "dip_threshold_from_30d_high_pct": 0.12,
+      "n_picks": 1538,
+      "median_fwd_7d_pct": -0.8594576249644492,
+      "mean_fwd_7d_pct": 0.3357658377928114,
+      "win_rate_pct": 3.237704918032787
+    }
+  ]
+}
