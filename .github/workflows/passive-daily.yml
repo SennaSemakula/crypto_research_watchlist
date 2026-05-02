@@ -1,0 +1,60 @@
+name: Passive accumulation (daily)
+
+# Daily run of the passive accumulation engine. Shadow-only in v1: emits
+# would-be buys to Telegram, never places real orders. Mirrors the stock
+# side's passive cadence.
+#
+# Schedule: 14:00 UTC daily.
+
+on:
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: passive-daily
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install package
+        run: uv pip install --system -e .
+
+      - name: Run passive engine + send Telegram
+        env:
+          TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DATABASE_URL: sqlite:///crypto_research_watchlist.db
+          PAPER_TRADING: '1'
+        run: |
+          python -m crypto_research_watchlist passive --send-telegram
+
+      - name: Fail loud on any error
+        if: failure()
+        run: |
+          echo "::error::Passive daily run failed."
+          exit 1

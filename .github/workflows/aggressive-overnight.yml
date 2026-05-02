@@ -1,0 +1,57 @@
+name: Aggressive rotation (overnight)
+
+# Aggressive rotation engine. Crypto trades 24/7 so "overnight" is a
+# soft label; cron is 22:00 UTC weekdays to align with stock side cadence.
+
+on:
+  schedule:
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aggressive-overnight
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install package
+        run: uv pip install --system -e .
+
+      - name: Run aggressive engine + send Telegram
+        env:
+          TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DATABASE_URL: sqlite:///crypto_research_watchlist.db
+          PAPER_TRADING: '1'
+        run: |
+          python -m crypto_research_watchlist aggressive --send-telegram
+
+      - name: Fail loud on any error
+        if: failure()
+        run: |
+          echo "::error::Aggressive overnight run failed."
+          exit 1

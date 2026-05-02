@@ -1,0 +1,71 @@
+name: Weekly learning summary
+
+# Weekly digest of decisions + back-evaluated hit rate.
+# Schedule: Sundays 18:00 UTC.
+
+on:
+  schedule:
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: learning-summary
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Install package
+        run: uv pip install --system -e .
+
+      - name: Run learning summary + send Telegram
+        env:
+          TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DATABASE_URL: sqlite:///crypto_research_watchlist.db
+          PAPER_TRADING: '1'
+        run: |
+          python -m crypto_research_watchlist learning-summary --send-telegram
+
+      - name: Commit markdown report
+        run: |
+          git config user.email "senna.semakula@gmail.com"
+          git config user.name "Senna Semakula-Buuza"
+          git add reports/learning_summary_*.md 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "no markdown changes"
+            exit 0
+          fi
+          DATE=$(date -u +%Y-%m-%d)
+          git commit -m "weekly learning summary: ${DATE}"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Fail loud on any error
+        if: failure()
+        run: |
+          echo "::error::Weekly learning summary failed."
+          exit 1
