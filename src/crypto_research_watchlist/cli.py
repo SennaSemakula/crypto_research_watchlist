@@ -30,9 +30,15 @@ def cli_init_db() -> None:
 
 
 @app.command("run")
-def cli_run(write_report: bool = True, persist: bool = True) -> None:
+def cli_run(
+    write_report: bool = True,
+    persist: bool = True,
+    send_telegram: bool = typer.Option(False, "--send-telegram", help="Send the ranked watchlist to Telegram. Requires TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID + TELEGRAM_ENABLED in env."),
+) -> None:
     """Run the pipeline once."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    for noisy in ("httpx", "httpcore", "urllib3"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     cfg = load_app_config()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url) if persist else None
@@ -43,6 +49,14 @@ def cli_run(write_report: bool = True, persist: bool = True) -> None:
         typer.echo(f"{idx:2d}. {c.symbol:10s} {c.action:8s} {c.score:+.2f}  {c.reason}")
     if result.report_path:
         typer.echo(f"report: {result.report_path}")
+
+    if send_telegram:
+        from .notifiers.telegram import TelegramNotifier
+        cfg.notifications.telegram = True
+        outcome = TelegramNotifier(cfg, env).send(result)
+        typer.echo(f"telegram: status={outcome.status} error={outcome.error or '-'}")
+        if outcome.status in {"failed", "partial"}:
+            raise typer.Exit(code=1)
 
 
 @app.command("candidates")
