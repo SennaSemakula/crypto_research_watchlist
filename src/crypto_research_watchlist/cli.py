@@ -23,6 +23,19 @@ from .models import CandidateRecord, PaperCash, PaperPosition
 from .pipeline import run_once
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
+news_app = typer.Typer(add_completion=False, help="News ingestion + sentiment.")
+app.add_typer(news_app, name="news")
+
+
+def _setup_logging(level: int = logging.INFO) -> None:
+    """Common logging setup. Silences noisy http libraries.
+
+    Earlier versions only silenced httpx in cli_run, so the bot token
+    leaked into stdout from other subcommands. Centralised here.
+    """
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)s %(message)s")
+    for noisy in ("httpx", "httpcore", "urllib3", "ccxt"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 @app.command("init-db")
@@ -40,9 +53,7 @@ def cli_run(
     send_telegram: bool = typer.Option(False, "--send-telegram", help="Send the ranked watchlist to Telegram. Requires TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID + TELEGRAM_ENABLED in env."),
 ) -> None:
     """Run the pipeline once."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    for noisy in ("httpx", "httpcore", "urllib3"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+    _setup_logging()
     cfg = load_app_config()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url) if persist else None
@@ -112,7 +123,7 @@ def cli_passive(
     send_telegram: bool = typer.Option(False, "--send-telegram", help="POST report to Telegram."),
 ) -> None:
     """Run the passive accumulation engine on the latest pipeline result."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _setup_logging()
     cfg = load_app_config()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url)
@@ -157,7 +168,7 @@ def cli_aggressive(
     send_telegram: bool = typer.Option(False, "--send-telegram"),
 ) -> None:
     """Run the aggressive rotation engine."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _setup_logging()
     cfg = load_app_config()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url)
@@ -184,7 +195,7 @@ def cli_supervise(
     lookback_hours: int = typer.Option(48, "--lookback-hours"),
 ) -> None:
     """Reconcile paper-broker state with decision audit trail."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _setup_logging()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url)
     cfg = load_app_config()
@@ -230,7 +241,7 @@ def cli_learning_summary(
     write_markdown: bool = typer.Option(True, "--write-markdown/--no-write-markdown"),
 ) -> None:
     """Weekly digest of decisions + hit-rate back-evaluation."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _setup_logging()
     env = EnvSettings.from_env()
     engine = init_db(env.database_url)
 
@@ -254,6 +265,22 @@ def cli_learning_summary(
     if send_telegram:
         ok = send_learning_telegram(summary)
         typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
+
+
+@news_app.command("refresh")
+def cli_news_refresh() -> None:
+    """Fetch news from configured sources and persist with sentiment scores."""
+    _setup_logging()
+    cfg = load_app_config()
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+
+    from .news.orchestrator import refresh_news
+    report = refresh_news(engine, cfg.crypto)
+    typer.echo(
+        f"news: inserted={report.inserted} skipped={report.skipped} "
+        f"errors={report.errors} sources={report.by_source}"
+    )
 
 
 def main() -> None:

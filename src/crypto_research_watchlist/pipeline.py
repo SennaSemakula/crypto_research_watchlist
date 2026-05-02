@@ -118,17 +118,32 @@ def run_once(
     engine: Engine | None = None,
     price_loader: PriceLoader | None = None,
     funding_loader: Callable[[str], list[float]] | None = None,
+    oi_loader: Callable[[str], dict] | None = None,
     onchain_loader: Callable[[str], dict] | None = None,
     write_report: bool = True,
+    refresh_news: bool = True,
 ) -> RunResult:
     """One pipeline run.
 
     Builds the filtered universe, fetches per-symbol data, runs every
     signal evaluator, builds candidates with risk verdicts, persists to
     the DB (if engine is provided), and writes a markdown report.
+
+    ``oi_loader`` is split out from the older ``onchain_loader`` so callers
+    can wire OI separately. For backward compatibility, when oi_loader is
+    None and the legacy onchain_loader returns a dict containing
+    ``open_interest_today``, those keys are still consumed here.
     """
     run_at = datetime.now(timezone.utc)
     price_loader = price_loader or parquet_price_loader()
+
+    # News refresh is best-effort: failure logs WARNING, run continues.
+    if refresh_news and engine is not None:
+        try:
+            from .news.orchestrator import refresh_news as _refresh_news
+            _refresh_news(engine, cfg.crypto)
+        except Exception as exc:
+            logger.warning("news refresh failed: %s", exc)
 
     universe = filter_universe(cfg, build_universe(cfg))
     btc_df = price_loader("BTC-USD")
@@ -138,7 +153,19 @@ def run_once(
     for entry in universe:
         price_df = price_loader(entry.symbol)
         funding_history = funding_loader(entry.symbol) if funding_loader else None
+        oi_data = oi_loader(entry.symbol) if oi_loader else {}
         onchain = onchain_loader(entry.symbol) if onchain_loader else {}
+
+        # Allow legacy onchain_loader to also carry OI keys until callers
+        # migrate. New callers should use oi_loader.
+        oi_today = (
+            (oi_data or {}).get("open_interest_today")
+            or (onchain or {}).get("open_interest_today")
+        )
+        oi_7d = (
+            (oi_data or {}).get("open_interest_7d_ago")
+            or (onchain or {}).get("open_interest_7d_ago")
+        )
 
         ctx = SignalContext(
             symbol=entry.symbol,
@@ -147,8 +174,8 @@ def run_once(
             eth_price_df=eth_df,
             funding_rate=funding_history[-1] if funding_history else None,
             funding_rate_history=funding_history,
-            open_interest_today=onchain.get("open_interest_today") if onchain else None,
-            open_interest_7d_ago=onchain.get("open_interest_7d_ago") if onchain else None,
+            open_interest_today=oi_today,
+            open_interest_7d_ago=oi_7d,
             active_addresses_z=onchain.get("active_addresses_z") if onchain else None,
             exchange_netflow_usd_7d=onchain.get("exchange_netflow_usd_7d") if onchain else None,
         )
