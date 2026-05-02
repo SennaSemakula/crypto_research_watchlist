@@ -111,6 +111,14 @@ class AppConfig:
         return self.crypto.aggressive
 
     @property
+    def passive(self):  # type: ignore[no-untyped-def]
+        return self.crypto.passive
+
+    @property
+    def learning_summary(self):  # type: ignore[no-untyped-def]
+        return self.crypto.learning_summary
+
+    @property
     def risk_limits(self):  # type: ignore[no-untyped-def]
         return self.crypto.risk_limits
 

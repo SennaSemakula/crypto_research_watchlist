@@ -57,6 +57,22 @@ aggressive:
   rotation_score_gap: 15.0
   drift_floor_pt: 8.0
   cooldown_after_chase_trap_days: 3
+  cooldown_days: 3                     # alias for cooldown_after_chase_trap_days, used by passive notifier
+
+passive:
+  # Crypto-tuned passive accumulation engine. Shadow-only in v1 (no live exec).
+  shadow_mode: true
+  first_tranche_usd: 100               # USD allocated on first buy of a name
+  add_tranche_usd: 100                 # USD allocated when adding to an existing name
+  weekly_cap_per_symbol_usd: 300       # max USD spent per symbol per week
+  weekly_cap_total_usd: 1500           # max total USD across all names per week
+  dip_threshold_from_30d_high_pct: 0.08  # buy-the-dip trigger: -8% from 30d high
+  drawdown_gate_pct: 0.15              # block new buys if 30d portfolio drawdown <= -15%
+  min_accumulation_score: 0.30         # score floor for any buy (signal strength scale [-1, +1])
+  high_conviction_score_threshold: 0.60  # score >= this = high-conviction; permits add-tranche bonus
+
+learning_summary:
+  weeks_back_default: 1                # default weeks-back window for the weekly digest
 
 backtesting:
   benchmarks: [BTC-USD, ETH-USD]       # crypto-native benchmarks

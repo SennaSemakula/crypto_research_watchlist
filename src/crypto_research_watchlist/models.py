@@ -95,3 +95,48 @@ class PaperCash(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     cash_usd: Mapped[float] = mapped_column(Float, default=0.0)
     last_update: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+class PassiveDecision(Base):
+    """One row per passive-engine decision. Append-only audit trail.
+
+    Mirrors the stock side's AutoTrade journal pattern, scaled down: we
+    do not actually place orders in v1 (paper / shadow only) so storing
+    the action + reasons + sizing is sufficient for back-evaluation.
+    """
+
+    __tablename__ = "passive_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False, index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    accumulation_score: Mapped[float] = mapped_column(Float, default=0.0)
+    tranche_usd: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reasons: Mapped[dict] = mapped_column(JSON, default=dict)
+    shadow_mode: Mapped[bool] = mapped_column(Integer, default=1)
+
+
+class AggressiveDecision(Base):
+    """One row per aggressive-engine decision."""
+
+    __tablename__ = "aggressive_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False, index=True)
+    symbol: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    prior_action: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reasons: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class LearningSummaryRecord(Base):
+    """Weekly digest snapshot. payload holds the full structured summary."""
+
+    __tablename__ = "learning_summaries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    week_ending: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
