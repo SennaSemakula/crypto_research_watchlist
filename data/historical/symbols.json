@@ -1,0 +1,22 @@
+{
+  "universe": [
+    "BTC-USD",
+    "ETH-USD",
+    "SOL-USD",
+    "BNB-USD",
+    "XRP-USD",
+    "ADA-USD",
+    "AVAX-USD",
+    "DOT-USD",
+    "LINK-USD",
+    "MATIC-USD"
+  ],
+  "benchmarks": [
+    "SPY"
+  ],
+  "macro": [
+    "^VIX"
+  ],
+  "years_back": 5,
+  "generated_at": "2026-05-02T12:06:35.393378+00:00"
+}

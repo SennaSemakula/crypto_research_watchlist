@@ -1,0 +1,110 @@
+[
+  {
+    "symbol": "ADA-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 1,
+    "note": ""
+  },
+  {
+    "symbol": "AVAX-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 2,
+    "note": ""
+  },
+  {
+    "symbol": "BNB-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 2,
+    "note": ""
+  },
+  {
+    "symbol": "BTC-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 0,
+    "note": ""
+  },
+  {
+    "symbol": "DOT-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 2,
+    "note": ""
+  },
+  {
+    "symbol": "ETH-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 0,
+    "note": ""
+  },
+  {
+    "symbol": "LINK-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 3,
+    "note": ""
+  },
+  {
+    "symbol": "MATIC-USD",
+    "rows": 1427,
+    "first_date": "2021-04-28",
+    "last_date": "2025-03-24",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 5,
+    "note": ""
+  },
+  {
+    "symbol": "SOL-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 3,
+    "note": ""
+  },
+  {
+    "symbol": "SPY",
+    "rows": 1259,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 35,
+    "suspect_jumps": 0,
+    "note": ""
+  },
+  {
+    "symbol": "XRP-USD",
+    "rows": 1830,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 0,
+    "suspect_jumps": 3,
+    "note": ""
+  },
+  {
+    "symbol": "^VIX",
+    "rows": 1259,
+    "first_date": "2021-04-28",
+    "last_date": "2026-05-01",
+    "gaps_over_3d": 35,
+    "suspect_jumps": 8,
+    "note": ""
+  }
+]

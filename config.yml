@@ -1,0 +1,94 @@
+# ---------------------------------------------------------------------------
+# Crypto Research Watchlist — configuration
+# ---------------------------------------------------------------------------
+# 24/7 markets. Top-10-by-market-cap, blue-chip-but-volatile universe.
+# NO stablecoins, NO meme coins, NO sub-$1B coins.
+# ---------------------------------------------------------------------------
+
+universe:
+  # yfinance-style symbols (e.g. "BTC-USD"). Order roughly by current market cap.
+  symbols:
+    - BTC-USD
+    - ETH-USD
+    - SOL-USD
+    - BNB-USD
+    - XRP-USD
+    - ADA-USD
+    - AVAX-USD
+    - DOT-USD
+    - LINK-USD
+    - MATIC-USD
+  # Categorisation for sector-equivalent calibration.
+  sectors:
+    L1:        [BTC-USD, ETH-USD, SOL-USD, BNB-USD, AVAX-USD, ADA-USD, DOT-USD]
+    payments:  [XRP-USD]
+    oracle:    [LINK-USD]
+    layer2:    [MATIC-USD]
+  exclude_stablecoins: true
+  exclude_meme: true
+  min_market_cap_usd: 1_000_000_000
+
+scoring:
+  weights:
+    momentum: 0.35
+    volatility_regime: 0.20
+    rel_strength_vs_btc: 0.20
+    funding_signal: 0.10   # placeholder; routine-c will source it later
+    drawdown_penalty: 0.15
+  thresholds:
+    strong: 72
+    watchlist: 55
+    avoid: 40
+
+risk_limits:
+  # Crypto-tuned: more permissive than stocks because the asset class is fatter-tailed.
+  max_portfolio_weight_single_name: 0.30
+  high_vol_threshold_annual: 1.20      # 120% annualised vol = "high"
+  review_drawdown_pct: 0.25            # suggested review level
+  max_concurrent_positions: 2
+
+aggressive:
+  # The chase-trap gate. Crypto is more volatile than equities, so we lift the
+  # threshold from 15% (stocks) to 30%. Sweep this in the daily calibration.
+  chase_trap_5d_pct: 0.30
+  chase_trap_1d_pct: 0.18              # extra single-day spike guard
+  momentum_lookback_days: 60
+  rotation_rank_drop: 3                # rotate if current holding's rank slips this many spots
+  rotation_score_gap: 15.0
+  drift_floor_pt: 8.0
+  cooldown_after_chase_trap_days: 3
+
+backtesting:
+  benchmarks: [BTC-USD, ETH-USD]       # crypto-native benchmarks
+  cross_asset: [SPY]                   # equity cross-check
+  macro: [^VIX]                        # VIX as macro regime marker
+  holding_periods_days: [1, 7, 21, 63]
+  transaction_cost_bps: 10             # 0.10% per side (CEX retail-tier)
+  slippage_bps: 8                      # 0.08% per side
+
+data_sources:
+  # yfinance is free + sufficient for daily OHLCV. ccxt for intra-day public endpoints.
+  market_data_order: [yfinance, ccxt]
+  funding_rate_order: [ccxt]           # placeholder; not yet wired
+  no_paid_apis: true
+
+reports:
+  reports_dir: reports
+  save_markdown: true
+  top_n_terminal: 10
+
+scheduler:
+  # All routines live in routines/ and are kicked by the parent agent platform.
+  enabled: false
+
+portfolio:
+  # Notional-only. NEVER live trades. NEVER Telegram.
+  total_capital_usd: 5000
+  cash_available_usd: 5000
+  currency: USD
+  mode: aggressive
+  target_total_positions: 1
+  min_suggested_weight: 0.05
+
+llm:
+  enabled: false  # The autonomous agents handle qualitative work; no client-side LLM here.
