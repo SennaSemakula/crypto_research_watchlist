@@ -28,6 +28,8 @@ def test_render_html_includes_top_candidates():
         ],
     )
     html = _render_html(result)
-    assert "<b>BTC-USD</b>" in html
-    assert "STRONG" in html
+    assert "BTC-USD" in html
+    assert "[STRONG]" in html
     assert "ETH-USD" in html
+    assert "Crypto Daily Watchlist" in html
+    assert "Ranked candidates" in html

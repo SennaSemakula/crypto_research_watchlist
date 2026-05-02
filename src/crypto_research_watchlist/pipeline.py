@@ -40,6 +40,7 @@ class RunResult:
     candidates: list[Candidate] = field(default_factory=list)
     universe: list[UniverseEntry] = field(default_factory=list)
     report_path: Path | None = None
+    market: dict = field(default_factory=dict)
 
 
 def parquet_price_loader(parquet_path: Path = DEFAULT_PARQUET) -> PriceLoader:
@@ -78,6 +79,37 @@ def _drawdown_30d(price_df: pd.DataFrame | None) -> float | None:
     close = price_df.sort_values("date")["close"].astype(float).tail(31)
     peak = close.cummax()
     return float((close.iloc[-1] / peak.max() - 1.0))
+
+
+def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
+    """Compact price metadata used by the renderer (last, %1d/%7d/%30d, ATR-14, 30d high/low)."""
+    if price_df is None or price_df.empty:
+        return None
+    df = price_df.sort_values("date")
+    closes = df["close"].astype(float).to_numpy()
+    if len(closes) < 1:
+        return None
+    last = float(closes[-1])
+    out: dict = {"last": last}
+    if len(closes) >= 2:
+        out["p1d"] = float(last / closes[-2] - 1.0)
+    if len(closes) >= 8:
+        out["p7d"] = float(last / closes[-8] - 1.0)
+    if len(closes) >= 31:
+        out["p30d"] = float(last / closes[-31] - 1.0)
+    if len(df) >= 30 and {"high", "low"}.issubset(df.columns):
+        recent = df.tail(30)
+        out["high30"] = float(recent["high"].astype(float).max())
+        out["low30"] = float(recent["low"].astype(float).min())
+    if len(df) >= 15 and {"high", "low", "close"}.issubset(df.columns):
+        recent = df.tail(15)
+        h = recent["high"].astype(float).to_numpy()
+        l = recent["low"].astype(float).to_numpy()
+        c = recent["close"].astype(float).to_numpy()
+        prev_c = np.concatenate(([c[0]], c[:-1]))
+        tr = np.maximum.reduce([h - l, np.abs(h - prev_c), np.abs(l - prev_c)])
+        out["atr14"] = float(tr[-14:].mean())
+    return out
 
 
 def run_once(
@@ -128,9 +160,16 @@ def run_once(
             annualised_vol=_annualised_vol(price_df),
             drawdown_30d=_drawdown_30d(price_df),
         )
+        px = _price_extras(price_df)
+        if px:
+            c.extras["px"] = px
         candidates.append(c)
 
     ranked = rank_candidates(candidates)
+    market = {
+        "btc": _price_extras(btc_df),
+        "eth": _price_extras(eth_df),
+    }
 
     if engine is not None:
         _persist(engine, run_at, ranked)
@@ -139,7 +178,13 @@ def run_once(
     if write_report:
         report_path = _write_report(cfg, run_at, ranked)
 
-    return RunResult(run_at=run_at, candidates=ranked, universe=universe, report_path=report_path)
+    return RunResult(
+        run_at=run_at,
+        candidates=ranked,
+        universe=universe,
+        report_path=report_path,
+        market=market,
+    )
 
 
 def _persist(engine: Engine, run_at: datetime, candidates: list[Candidate]) -> None:

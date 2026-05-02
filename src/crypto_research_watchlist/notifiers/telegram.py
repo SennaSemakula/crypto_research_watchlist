@@ -86,15 +86,118 @@ def _escape(text: str) -> str:
     )
 
 
+_ACTION_EMOJI = {
+    "STRONG": "🟢",
+    "WATCH": "🟡",
+    "AVOID": "🔴",
+    "INSUFFICIENT_DATA": "⚪",
+}
+
+
+def _fmt_price(p: float | None) -> str:
+    if p is None:
+        return "?"
+    if p >= 1000:
+        return f"{p:,.0f}"
+    if p >= 1:
+        return f"{p:,.2f}"
+    return f"{p:.4f}"
+
+
+def _fmt_pct(p: float | None, label: str) -> str:
+    if p is None:
+        return ""
+    arrow = "↑" if p > 0 else "↓" if p < 0 else "="
+    return f"{label}{arrow}{abs(p) * 100:.1f}%"
+
+
+def _render_candidate(idx: int, c) -> list[str]:
+    out: list[str] = []
+    emoji = _ACTION_EMOJI.get(c.action, "•")
+    score_pct = int(round((c.score + 1) * 50))
+    px = (c.extras.get("px") or {}) if c.extras else {}
+
+    header_parts = [f"{emoji} <b>{idx}. {_escape(c.symbol)}</b> [{c.action}] · {score_pct}/100 ({c.score:+.2f})"]
+    if px.get("last") is not None:
+        moves = []
+        if px.get("p1d") is not None:
+            moves.append(_fmt_pct(px["p1d"], "1d "))
+        if px.get("p7d") is not None:
+            moves.append(_fmt_pct(px["p7d"], "7d "))
+        suffix = "  ".join([f"${_fmt_price(px['last'])}"] + moves)
+        header_parts.append(suffix)
+    out.append("  ·  ".join(header_parts))
+
+    notable = sorted(
+        (s for s in c.signals.values() if s.is_notable),
+        key=lambda x: -abs(x.strength),
+    )[:3]
+    for s in notable:
+        arrow = "🟢" if s.strength > 0 else "🔴"
+        bullet = s.bullets[0] if s.bullets else _escape(s.label)
+        out.append(f"    {arrow} <b>{_escape(s.source)}</b>: {_escape(bullet)}")
+
+    last = px.get("last")
+    atr = px.get("atr14")
+    if last is not None and atr is not None and atr > 0:
+        buy_lo = last - atr
+        buy_hi = last - 0.3 * atr
+        sell1 = last + atr
+        sell2 = last + 2 * atr
+        stop = last - 1.5 * atr
+        out.append(f"    🎯 buy <code>${_fmt_price(buy_lo)} - ${_fmt_price(buy_hi)}</code>")
+        out.append(f"    ✅ tp <code>${_fmt_price(sell1)}</code> / <code>${_fmt_price(sell2)}</code>")
+        out.append(f"    🛑 stop <code>${_fmt_price(stop)}</code>")
+
+    if c.risk and c.risk.warnings:
+        for w in c.risk.warnings[:2]:
+            out.append(f"    ⚠️ {_escape(w)}")
+    if c.risk and c.risk.time_horizon and c.risk.time_horizon != "n/a":
+        out.append(f"    ⏱ horizon {_escape(c.risk.time_horizon)} · max weight {c.risk.max_portfolio_weight:.0%}")
+
+    return out
+
+
 def _render_html(result: RunResult) -> str:
     lines: list[str] = []
-    lines.append(f"<b>Crypto Watchlist</b> {result.run_at.isoformat(timespec='minutes')}")
+    date_str = result.run_at.strftime("%Y-%m-%d")
+    lines.append(f"📊 <b>Crypto Daily Watchlist</b>  {date_str}")
     lines.append("")
-    for idx, c in enumerate(result.candidates[:5], start=1):
-        lines.append(
-            f"{idx}. <b>{_escape(c.symbol)}</b> "
-            f"<i>{_escape(c.action)}</i> ({c.score:+.2f}) — {_escape(c.reason)}"
-        )
+
+    market = result.market or {}
+    btc = market.get("btc") or {}
+    eth = market.get("eth") or {}
+    if btc.get("last") or eth.get("last"):
+        lines.append("<b>Market</b>")
+        if btc.get("last") is not None:
+            lines.append(
+                f"  BTC ${_fmt_price(btc['last'])}  "
+                f"{_fmt_pct(btc.get('p1d'), '1d ')}  {_fmt_pct(btc.get('p7d'), '7d ')}"
+            )
+        if eth.get("last") is not None:
+            lines.append(
+                f"  ETH ${_fmt_price(eth['last'])}  "
+                f"{_fmt_pct(eth.get('p1d'), '1d ')}  {_fmt_pct(eth.get('p7d'), '7d ')}"
+            )
+        if btc.get("last") and eth.get("last"):
+            lines.append(f"  ETH/BTC {eth['last'] / btc['last']:.4f}")
+        lines.append("")
+
+    top = result.candidates[:5]
+    if top:
+        lines.append(f"<b>Ranked candidates</b>  (top {len(top)} of {len(result.candidates)})")
+        lines.append("")
+        for idx, c in enumerate(top, 1):
+            lines.extend(_render_candidate(idx, c))
+            lines.append("")
+
+    if result.candidates:
+        actions = {}
+        for c in result.candidates:
+            actions[c.action] = actions.get(c.action, 0) + 1
+        action_summary = " · ".join(f"{k}: {v}" for k, v in sorted(actions.items()))
+        lines.append(f"<i>{len(result.universe)} symbols · {action_summary}</i>")
+    lines.append(f"<i>Run {result.run_at.isoformat(timespec='minutes')}</i>")
     return "\n".join(lines)
 
 
