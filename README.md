@@ -28,10 +28,35 @@ adapted for the 24/7 crypto market.
 
 ```
 config.yml                          universe, gates, sizing
+config.example.yml                  example to copy from
+.env.example                        environment overrides example
+run                                 wrapper script: venv + pipeline dispatch
 src/crypto_research_watchlist/
-  autotrader/aggressive.py          rotation gate logic
-  autotrader/config.py              Pydantic config model
-  signals/                          (placeholder for per-signal modules)
+  config.py                         AppConfig + EnvSettings
+  db.py                             SQLAlchemy engine / session
+  models.py                         ORM: SignalRecord, CandidateRecord, PaperOrder...
+  universe.py                       UniverseEntry + filter
+  risk.py                           RiskVerdict + classify()
+  candidates.py                     Candidate + build / rank
+  pipeline.py                       run_once() end-to-end
+  cli.py                            Typer CLI: run / candidates / paper-status
+  autotrader/
+    aggressive.py                   rotation gate (chase-trap)
+    config.py                       CryptoConfig (Pydantic)
+    paper_broker.py                 in-process paper broker (idempotent)
+    runner.py                       converts candidates into paper orders
+  data/
+    ccxt_provider.py                CCXT spot + perp adapter
+    funding_provider.py             funding-rate provider
+    onchain_provider.py             on-chain stub
+  signals/
+    technical.py                    RSI / MACD / EMA cross / volume spike
+    funding_rate.py                 perp funding signal
+    open_interest.py                OI delta + price delta
+    onchain.py                      active addresses + exchange netflow
+    cross_asset.py                  ETH/BTC, relative strength vs BTC
+  notifiers/
+    telegram.py                     off by default
 scripts/research/
   backfill_history.py               yfinance -> data/historical/prices_daily.parquet
   baseline_backtest.py              60d-momentum + chase-trap, 5y of daily bars
@@ -40,19 +65,39 @@ data/historical/                    parquet bars, committed to repo for agent us
 research_log/                       daily calibration evidence (one md per day)
 intraday_log/                       hourly classification evidence (one md per run)
 research/assets/                    per-symbol deep-dive notes
-reports/                            backtest outputs
+reports/                            backtest outputs + watchlist md/json
+docs/RESEARCH.md                    universe + sources + signals + risk research
+docs/PLAN.md                        phased build plan
+docs/SIGNALS.md                     per-evaluator reference
 docs/CRYPTO_VS_STOCKS.md            what is and is not portable from the stock repo
+```
+
+## CLI
+
+```
+./run                       run pipeline once -> reports/watchlist_<date>.md
+./run -- candidates         show last run's ranking
+./run -- paper-status       show paper portfolio cash + positions
+./run -- init-db            create / migrate the SQLite schema (idempotent)
 ```
 
 ## Running locally
 
+The `./run` wrapper handles venv + dependency install + DB init on first
+invocation. After cloning:
+
 ```bash
-python3.12 -m venv .venv
+./run                                  # pipeline run; writes reports/watchlist_<date>.md
+./run -- paper-status                  # show paper portfolio
+./run -- candidates                    # last run's ranking from the DB
+
+# Manual flow if you prefer:
+python3.13 -m venv .venv
 source .venv/bin/activate
-pip install -e .
-python scripts/research/backfill_history.py
-python scripts/research/baseline_backtest.py
-pytest -q
+pip install -e ".[dev]"
+pytest -q                              # 51 tests
+python scripts/research/backfill_history.py    # refresh yfinance daily bars
+python scripts/research/baseline_backtest.py   # baseline strategy report
 ```
 
 ## Hard rules (every routine, every contributor)

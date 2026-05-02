@@ -90,5 +90,9 @@ portfolio:
   target_total_positions: 1
   min_suggested_weight: 0.05
 
+notifications:
+  terminal: true
+  telegram: false
+
 llm:
   enabled: false  # The autonomous agents handle qualitative work; no client-side LLM here.

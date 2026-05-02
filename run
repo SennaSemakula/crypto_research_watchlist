@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# One-command entrypoint for the crypto research watchlist.
+#
+#   ./run                     - run the pipeline once and write a watchlist
+#   ./run init-db             - create / migrate the SQLite schema
+#   ./run candidates          - print the latest run's candidates
+#   ./run paper-status        - show paper portfolio
+#   ./run -- --any --cli args - pass anything after `--` straight to the CLI
+#
+# Environment overrides:
+#   PY=/path/to/python3.13     pick a specific interpreter
+
+set -euo pipefail
+cd "$(dirname "$0")"
+
+PY=${PY:-}
+
+if [[ -z "${PY}" ]]; then
+    for candidate in python3.13 python3.12 python3.11 python3 /opt/homebrew/bin/python3.13 /opt/homebrew/bin/python3.12; do
+        if command -v "$candidate" >/dev/null 2>&1; then
+            version=$("$candidate" -c 'import sys; print("{}.{}".format(sys.version_info[0], sys.version_info[1]))' 2>/dev/null || echo "0.0")
+            major=${version%%.*}
+            minor=${version##*.}
+            if [[ "${major}" -ge 3 && "${minor}" -ge 11 ]]; then
+                PY="$candidate"
+                break
+            fi
+        fi
+    done
+fi
+
+if [[ -z "${PY}" ]]; then
+    echo "ERROR: No Python 3.11+ interpreter found. Install one or set PY=/path/to/python3.13" >&2
+    exit 1
+fi
+
+VENV=".venv"
+STAMP="${VENV}/.install-stamp"
+REQ_HASH=$(shasum pyproject.toml | awk '{print $1}')
+
+if [[ ! -d "$VENV" ]]; then
+    echo "[run] creating venv with ${PY}"
+    "$PY" -m venv "$VENV"
+fi
+
+# shellcheck disable=SC1091
+source "${VENV}/bin/activate"
+
+if [[ ! -f "$STAMP" || "$(cat "$STAMP" 2>/dev/null)" != "$REQ_HASH" ]]; then
+    echo "[run] installing dependencies (first run or pyproject.toml changed)"
+    pip install --upgrade pip --quiet
+    pip install -e ".[dev]" --quiet
+    echo "$REQ_HASH" > "$STAMP"
+fi
+
+[[ -f .env ]]        || { cp .env.example .env; echo "[run] wrote .env from .env.example"; }
+[[ -f config.yml ]]  || { cp config.example.yml config.yml; echo "[run] wrote config.yml from config.example.yml"; }
+
+python -m crypto_research_watchlist init-db > /dev/null
+
+if [[ $# -eq 0 ]]; then
+    exec python -m crypto_research_watchlist run
+fi
+
+if [[ "$1" == "--" ]]; then
+    shift
+    exec python -m crypto_research_watchlist "$@"
+fi
+
+exec python -m crypto_research_watchlist "$@"
