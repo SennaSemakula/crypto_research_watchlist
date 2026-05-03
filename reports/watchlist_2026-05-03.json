@@ -3,7 +3,7 @@
   "candidates": [
     {
       "symbol": "ETH-USD",
-      "score": 55.25,
+      "score": 54.74,
       "action": "WATCH",
       "reason": "no notable signals",
       "signals": {
@@ -36,7 +36,7 @@
     },
     {
       "symbol": "BTC-USD",
-      "score": 50.68,
+      "score": 50.66,
       "action": "WATCH",
       "reason": "no notable signals",
       "signals": {
@@ -69,7 +69,7 @@
     },
     {
       "symbol": "ADA-USD",
-      "score": 50.1,
+      "score": 49.74,
       "action": "WATCH",
       "reason": "Underperforming BTC by 24 pts over 60d",
       "signals": {
@@ -139,7 +139,7 @@
     },
     {
       "symbol": "XRP-USD",
-      "score": 46.71,
+      "score": 47.03,
       "action": "WATCH",
       "reason": "no notable signals",
       "signals": {
@@ -174,7 +174,7 @@
     },
     {
       "symbol": "AVAX-USD",
-      "score": 46.43,
+      "score": 46.79,
       "action": "WATCH",
       "reason": "MACD below signal and negative: bearish momentum",
       "signals": {
@@ -211,7 +211,7 @@
     },
     {
       "symbol": "SOL-USD",
-      "score": 45.81,
+      "score": 46.29,
       "action": "WATCH",
       "reason": "MACD below signal and negative: bearish momentum",
       "signals": {
@@ -248,7 +248,7 @@
     },
     {
       "symbol": "BNB-USD",
-      "score": 45.78,
+      "score": 46.18,
       "action": "WATCH",
       "reason": "no notable signals",
       "signals": {
@@ -283,7 +283,7 @@
     },
     {
       "symbol": "DOT-USD",
-      "score": 45.41,
+      "score": 46.0,
       "action": "WATCH",
       "reason": "Underperforming BTC by 34 pts over 60d; MACD below signal and negative: bearish momentum",
       "signals": {
@@ -320,7 +320,7 @@
     },
     {
       "symbol": "LINK-USD",
-      "score": 41.82,
+      "score": 42.56,
       "action": "WATCH",
       "reason": "Death cross: 20-EMA crossed below 50-EMA",
       "signals": {
