@@ -357,12 +357,27 @@ def _render_candidate(idx: int, c, engine=None) -> list[str]:
     return out
 
 
+def _fmt_mcap(value: float | None) -> str:
+    """Compact human-readable market cap: 3.42e12 -> '$3.42T'."""
+    if value is None:
+        return "?"
+    av = abs(value)
+    if av >= 1e12:
+        return f"${value / 1e12:.2f}T"
+    if av >= 1e9:
+        return f"${value / 1e9:.2f}B"
+    if av >= 1e6:
+        return f"${value / 1e6:.2f}M"
+    return f"${value:,.0f}"
+
+
 def _render_market(market: dict | None) -> list[str]:
     if not market:
         return []
     btc = market.get("btc") or {}
     eth = market.get("eth") or {}
-    if not btc.get("last") and not eth.get("last"):
+    summary = market.get("summary")
+    if not btc.get("last") and not eth.get("last") and summary is None:
         return []
     lines = ["<b>Market</b>"]
     if btc.get("last") is not None:
@@ -377,6 +392,24 @@ def _render_market(market: dict | None) -> list[str]:
         )
     if btc.get("last") and eth.get("last"):
         lines.append(f"   ETH/BTC {eth['last'] / btc['last']:.4f}")
+
+    # CoinGecko global summary line. Authoritative BTC dominance + total
+    # market cap; we only render fields we actually have, to handle the
+    # "partial response" case gracefully.
+    if summary is not None:
+        parts: list[str] = []
+        mcap = getattr(summary, "total_market_cap_usd", None)
+        if mcap is not None:
+            parts.append(f"Total mcap <b>{_fmt_mcap(mcap)}</b>")
+        btc_d = getattr(summary, "btc_dominance_pct", None)
+        if btc_d is not None:
+            parts.append(f"BTC.D {btc_d:.1f}%")
+        eth_d = getattr(summary, "eth_dominance_pct", None)
+        if eth_d is not None:
+            parts.append(f"ETH.D {eth_d:.1f}%")
+        if parts:
+            lines.append("   " + "  ".join(parts))
+
     lines.append("")
     return lines
 
