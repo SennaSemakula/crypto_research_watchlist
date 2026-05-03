@@ -22,6 +22,8 @@ from .db import init_db, session_factory, session_scope
 from .models import CandidateRecord, PaperCash, PaperPosition
 from .pipeline import run_once
 
+logger = logging.getLogger(__name__)
+
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 news_app = typer.Typer(add_completion=False, help="News ingestion + sentiment.")
 app.add_typer(news_app, name="news")
@@ -302,6 +304,170 @@ def cli_learning_summary(
     if send_telegram:
         ok = send_learning_telegram(summary)
         typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
+
+
+@app.command("intraday")
+def cli_intraday(
+    send_telegram: bool = typer.Option(False, "--send-telegram", help="POST alert to Telegram if material change."),
+    score_delta_threshold: float = typer.Option(10.0, "--score-delta-threshold"),
+    news_lookback_minutes: int = typer.Option(60, "--news-lookback-minutes"),
+) -> None:
+    """Hourly intraday scan: refresh news + pipeline, alert only on material change.
+
+    Crypto trades 24/7 so daily cadence is insufficient. This command is
+    designed to be called from a GitHub Actions cron every hour. The DB is
+    persisted via a follow-up commit step so score-delta detection works
+    across runs.
+    """
+    _setup_logging()
+    cfg = load_app_config()
+    env = EnvSettings.from_env()
+    engine = init_db(env.database_url)
+
+    # Best-effort news refresh — never raise out of this command.
+    try:
+        from .news.orchestrator import refresh_news
+        refresh_news(engine, cfg.crypto)
+    except Exception as exc:  # pragma: no cover
+        logger.warning("intraday: news refresh failed: %s", exc)
+
+    # Snapshot prior scores BEFORE we run the pipeline (which writes new rows).
+    prior = _load_prior_candidates(engine)
+
+    # Run the pipeline — this writes fresh CandidateRecords as a side
+    # effect and gives us the current scored candidates.
+    try:
+        # We already refreshed news above; tell the pipeline to skip its
+        # internal refresh to avoid double work.
+        result = run_once(
+            cfg=cfg, engine=engine, write_report=False, refresh_news=False,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("intraday: pipeline failed: %s", exc)
+        typer.echo(
+            f"intraday: 0 symbols scanned, 0 score deltas, 0 new high-impact articles, telegram=skipped (pipeline error: {exc})"
+        )
+        return
+
+    # Detect score moves + action flips.
+    from .notifiers.intraday_notifier import (
+        IntradayAlert,
+        NewsHit,
+        ScoreMove,
+        send_intraday_telegram,
+    )
+
+    score_moves: list[ScoreMove] = []
+    for c in result.candidates:
+        prior_row = prior.get(c.symbol)
+        prior_score = prior_row[0] if prior_row else None
+        prior_action = prior_row[1] if prior_row else None
+        if prior_score is None:
+            continue  # no baseline → cannot detect delta
+        delta = c.score - prior_score
+        action_flipped = bool(prior_action) and prior_action != c.action
+        new_strong = c.action == "STRONG" and prior_action != "STRONG"
+        if abs(delta) >= score_delta_threshold or action_flipped or new_strong:
+            score_moves.append(ScoreMove(
+                symbol=c.symbol,
+                prior_score=float(prior_score),
+                current_score=float(c.score),
+                prior_action=prior_action,
+                current_action=c.action,
+            ))
+
+    # Detect high-impact news in the lookback window.
+    news_hits: list[NewsHit] = _recent_high_impact_news(
+        engine,
+        lookback_minutes=news_lookback_minutes,
+        min_magnitude=0.5,
+    )
+
+    alert = IntradayAlert(
+        score_moves=score_moves,
+        news_hits=news_hits,
+        scanned_symbols=len(result.candidates),
+    )
+
+    telegram_status = "disabled"
+    if send_telegram:
+        if alert.has_signal():
+            ok = send_intraday_telegram(alert)
+            telegram_status = "sent" if ok else "skipped"
+        else:
+            logger.info("intraday: no material change")
+            telegram_status = "skipped"
+
+    typer.echo(
+        f"intraday: {len(result.candidates)} symbols scanned, "
+        f"{len(score_moves)} score deltas, "
+        f"{len(news_hits)} new high-impact articles, "
+        f"telegram={telegram_status}"
+    )
+
+
+def _load_prior_candidates(engine) -> dict[str, tuple[float, str]]:
+    """Most-recent (score, action) per symbol from CandidateRecord.
+
+    Returns {} on any error so the intraday command stays resilient.
+    """
+    try:
+        from sqlalchemy import desc, select
+
+        SessionLocal = session_factory(engine)
+        out: dict[str, tuple[float, str]] = {}
+        with session_scope(SessionLocal) as session:
+            rows = session.scalars(
+                select(CandidateRecord).order_by(desc(CandidateRecord.run_at))
+            ).all()
+            for r in rows:
+                if r.symbol in out:
+                    continue
+                out[r.symbol] = (float(r.score), r.action)
+        return out
+    except Exception as exc:  # pragma: no cover
+        logger.warning("intraday: failed to load prior candidates: %s", exc)
+        return {}
+
+
+def _recent_high_impact_news(engine, *, lookback_minutes: int, min_magnitude: float):
+    """Articles in the last N minutes whose |sentiment| >= min_magnitude.
+
+    Returns a list of NewsHit. Empty on error / no hits.
+    """
+    from .notifiers.intraday_notifier import NewsHit
+    try:
+        from datetime import datetime, timedelta, timezone
+
+        from sqlalchemy import or_
+        from sqlalchemy.orm import Session
+
+        from .models import NewsArticle
+
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=lookback_minutes)
+        hits: list[NewsHit] = []
+        with Session(engine) as session:
+            rows = session.query(NewsArticle).filter(
+                NewsArticle.published_at >= cutoff,
+                or_(
+                    NewsArticle.sentiment_score >= min_magnitude,
+                    NewsArticle.sentiment_score <= -min_magnitude,
+                ),
+            ).all()
+            rows.sort(key=lambda r: abs(r.sentiment_score), reverse=True)
+            for r in rows[:10]:
+                tickers = list(r.currencies_json or [])
+                symbol = tickers[0] if tickers else "?"
+                hits.append(NewsHit(
+                    symbol=symbol,
+                    title=r.title or "",
+                    sentiment_score=float(r.sentiment_score or 0.0),
+                    sentiment_label=r.sentiment_label or "neutral",
+                ))
+        return hits
+    except Exception as exc:  # pragma: no cover
+        logger.warning("intraday: failed to load recent news: %s", exc)
+        return []
 
 
 @news_app.command("refresh")
