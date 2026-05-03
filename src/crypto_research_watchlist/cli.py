@@ -63,6 +63,7 @@ def cli_run(
     # Wire the real free-tier providers. Each one is fail-safe: any
     # exception inside a loader returns None / [] / {} and the corresponding
     # signal stays neutral.
+    from .data.etherscan_provider import EtherscanProvider, SYMBOL_TO_CHAIN
     from .data.funding_provider import FundingRateProvider
     from .data.onchain_provider import OnChainProvider
     from .data.openinterest_provider import OpenInterestProvider
@@ -70,6 +71,7 @@ def cli_run(
     fp = FundingRateProvider()
     oip = OpenInterestProvider()
     ocp = OnChainProvider()
+    esp = EtherscanProvider(api_key=env.etherscan_api_key)
 
     def _funding_loader(symbol: str):
         try:
@@ -84,14 +86,38 @@ def cli_run(
             return {}
 
     def _onchain_loader(symbol: str):
+        """Merge Blockchair (BTC/ETH) with Etherscan v2 (EVM coverage).
+
+        Coverage matrix:
+          BTC          -> Blockchair only
+          ETH          -> Blockchair + Etherscan (Etherscan tx-count
+                          z-score wins when present)
+          BNB/MATIC/AVAX -> Etherscan only
+          LINK + non-EVM (SOL/XRP/ADA/DOT) -> {} (no provider yet)
+        """
         try:
             snap = ocp.fetch(symbol)
-            return {
+            blockchair = {
                 "active_addresses_z": snap.active_addresses_z,
                 "exchange_netflow_usd_7d": snap.exchange_netflow_usd_7d,
             }
         except Exception:
-            return {}
+            blockchair = {"active_addresses_z": None, "exchange_netflow_usd_7d": None}
+
+        if symbol not in SYMBOL_TO_CHAIN:
+            return blockchair
+        try:
+            es = esp.fetch_chain_stats(symbol) or {}
+        except Exception:
+            es = {}
+
+        # Etherscan z wins when non-None; Blockchair fills the gap for ETH.
+        merged: dict = dict(blockchair)
+        if es.get("active_addresses_z") is not None:
+            merged["active_addresses_z"] = es["active_addresses_z"]
+        if es.get("daily_tx_count") is not None:
+            merged["daily_tx_count"] = es["daily_tx_count"]
+        return merged
 
     from .pipeline import _default_market_loader
     result = run_once(
