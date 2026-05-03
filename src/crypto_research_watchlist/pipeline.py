@@ -20,6 +20,7 @@ from sqlalchemy.engine import Engine
 
 from .candidates import Candidate, build_candidate, rank_candidates
 from .config import AppConfig
+from .data.coingecko_provider import CoinGeckoProvider, MarketSummary
 from .db import session_factory, session_scope
 from .models import CandidateRecord, SignalRecord
 from .signals import SignalContext, evaluate_all
@@ -112,6 +113,23 @@ def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
     return out
 
 
+def _default_market_loader() -> MarketSummary | None:
+    """Production market summary loader: reads CoinGecko key from env.
+
+    Returns None on absent key, HTTP failure, or any provider exception.
+    Pipeline never crashes when this fails.
+    """
+    try:
+        import os
+        key = os.environ.get("COINGECKO_API_KEY") or None
+        if not key:
+            return None
+        return CoinGeckoProvider(api_key=key).fetch_market_summary()
+    except Exception as exc:
+        logger.warning("default market summary loader failed: %s", exc)
+        return None
+
+
 def run_once(
     *,
     cfg: AppConfig,
@@ -120,6 +138,7 @@ def run_once(
     funding_loader: Callable[[str], list[float]] | None = None,
     oi_loader: Callable[[str], dict] | None = None,
     onchain_loader: Callable[[str], dict] | None = None,
+    market_loader: Callable[[], MarketSummary | None] | None = None,
     write_report: bool = True,
     refresh_news: bool = True,
 ) -> RunResult:
@@ -193,9 +212,22 @@ def run_once(
         candidates.append(c)
 
     ranked = rank_candidates(candidates)
+
+    # Market summary is fail-safe: absent key, network error, or loader
+    # exception all collapse to None. The renderer treats None as "skip
+    # the line".
+    summary: MarketSummary | None = None
+    if market_loader is not None:
+        try:
+            summary = market_loader()
+        except Exception as exc:
+            logger.warning("market_loader raised; continuing without summary: %s", exc)
+            summary = None
+
     market = {
         "btc": _price_extras(btc_df),
         "eth": _price_extras(eth_df),
+        "summary": summary,
     }
 
     if engine is not None:

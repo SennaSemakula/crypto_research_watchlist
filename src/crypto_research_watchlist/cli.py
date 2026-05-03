@@ -93,9 +93,11 @@ def cli_run(
         except Exception:
             return {}
 
+    from .pipeline import _default_market_loader
     result = run_once(
         cfg=cfg, engine=engine, write_report=write_report,
         funding_loader=_funding_loader, oi_loader=_oi_loader, onchain_loader=_onchain_loader,
+        market_loader=_default_market_loader,
     )
     top = result.candidates[: cfg.reports.top_n_terminal]
     typer.echo(f"run_at={result.run_at.isoformat()}")
