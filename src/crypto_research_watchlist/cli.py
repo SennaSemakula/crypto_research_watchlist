@@ -224,7 +224,7 @@ def cli_passive(
         )
     if send_telegram:
         from .notifiers.passive_notifier import send_passive_telegram
-        ok = send_passive_telegram(report, daily_mode=True)
+        ok = send_passive_telegram(report, daily_mode=False)
         typer.echo(f"telegram: {'sent' if ok else 'skipped'}")
 
 
