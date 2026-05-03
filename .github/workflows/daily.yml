@@ -49,8 +49,10 @@ jobs:
           TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CRYPTOPANIC_API_KEY: ${{ secrets.CRYPTOPANIC_API_KEY }}
           COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+          CRYPTOCOMPARE_API_KEY: ${{ secrets.CRYPTOCOMPARE_API_KEY }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           DATABASE_URL: sqlite:///crypto_research_watchlist.db
           PAPER_TRADING: '1'
         run: |
