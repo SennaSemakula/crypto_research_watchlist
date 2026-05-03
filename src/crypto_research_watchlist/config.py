@@ -40,9 +40,13 @@ class EnvSettings:
     # Paper trading (always on in v1; live trading is a future phase)
     paper_trading: bool = True
 
+    # Third-party data API keys (all optional; modules degrade gracefully).
+    coingecko_api_key: str | None = None
+    cryptopanic_api_key: str | None = None
+
     @classmethod
     def from_env(cls) -> EnvSettings:
-        # Best-effort .env load — silent if python-dotenv not installed.
+        # Best-effort .env load. Silent if python-dotenv not installed.
         try:
             from dotenv import load_dotenv  # type: ignore[import-not-found]
             load_dotenv(REPO_ROOT / ".env", override=False)
@@ -55,6 +59,8 @@ class EnvSettings:
             telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN") or None,
             telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID") or None,
             paper_trading=_truthy(os.getenv("PAPER_TRADING", "1")),
+            coingecko_api_key=os.getenv("COINGECKO_API_KEY") or None,
+            cryptopanic_api_key=os.getenv("CRYPTOPANIC_API_KEY") or None,
         )
 
 
