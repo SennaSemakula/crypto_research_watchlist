@@ -67,6 +67,7 @@ jobs:
           fi
           DATE=$(date -u +%Y-%m-%d)
           git commit -m "daily watchlist: ${DATE}"
+          git pull --rebase origin main
           git push origin HEAD:main
 
       - name: Fail loud on any error
