@@ -129,6 +129,23 @@ Already partly done: 5y daily OHLCV is present. Still TODO:
 Acceptance: report writes to `reports/walk_forward_<date>.md` with
 out-of-sample metrics by parameter.
 
+## Phase E.5 — hourly intraday cadence — DONE (2026-05-02)
+
+Crypto trades 24/7. The daily/overnight Telegram cadence wasn't enough,
+so the `intraday` CLI now runs hourly via
+`.github/workflows/intraday.yml`. It refreshes news, runs the pipeline,
+diffs against the prior CandidateRecord snapshot, and only fires Telegram
+when score moved by `>= 10` points, an action label flipped, a new STRONG
+appeared, or a `|sentiment| >= 0.5` article landed in the last hour. The
+DB is committed back to `main` after each run so deltas can be detected.
+
+Notifier: `notifiers/intraday_notifier.py` (compact alert, not a digest).
+Tests: 12 new in `tests/test_intraday.py`. See DECISION_ENGINE.md for
+trigger details.
+
+The aggressive-overnight cron also moved from Mon-Fri to all 7 days
+since the asset class doesn't observe weekends.
+
 ## Phase F — live readiness (FUTURE; not this session)
 
 - `src/crypto_research_watchlist/autotrader/brokers/coinbase_advanced.py`

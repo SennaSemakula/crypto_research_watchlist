@@ -202,6 +202,44 @@ The expected operator workflow: every Monday morning, eyeball the latest
 calibration JSON, decide whether to nudge a threshold, edit `config.yml`,
 commit. Manual loop, deliberate.
 
+## Intraday alert (hourly)
+
+Crypto trades 24/7 so the daily/overnight cadence is insufficient for
+material moves. The `intraday` CLI runs every hour from
+`.github/workflows/intraday.yml` and only fires Telegram when something
+has actually changed since the prior snapshot.
+
+Pipeline per run (target under 60s):
+
+1. Best-effort `refresh_news(engine, cfg)` (errors logged, not raised).
+2. Snapshot prior `(score, action)` per symbol from the most recent
+   `CandidateRecord` row.
+3. Run `pipeline.run_once(write_report=False)` — persists fresh
+   CandidateRecords as a side effect, giving the next intraday run a
+   baseline.
+4. Detect material change against the prior snapshot:
+   - Score moved by `|delta| >= score_delta_threshold` (default 10.0
+     points on the 0-100 scale).
+   - Action label flipped (e.g. WATCH -> STRONG, WATCH -> AVOID).
+   - Now flagged STRONG when it wasn't before.
+   - Any news article with `|sentiment_score| >= 0.5` published in the
+     last `news_lookback_minutes` window (default 60).
+5. If `--send-telegram` AND any material change, POST a compact
+   `IntradayAlert`. If no material change, log and exit 0 quietly.
+
+The DB is committed back to `main` at the end of each workflow run; that
+commit is what lets the next run see this run's scores. Without the
+commit, every run starts cold and score deltas can never fire.
+
+CLI:
+
+```
+python -m crypto_research_watchlist intraday \
+  --send-telegram \
+  --score-delta-threshold 10.0 \
+  --news-lookback-minutes 60
+```
+
 ## Why this shape
 
 Two engines, three notifiers, one supervisor: same as the stock side.
