@@ -1,11 +1,12 @@
 name: Aggressive rotation (overnight)
 
 # Aggressive rotation engine. Crypto trades 24/7 so "overnight" is a
-# soft label; cron is 22:00 UTC weekdays to align with stock side cadence.
+# soft label; cron runs 22:00 UTC every day (the asset class doesn't
+# observe weekends).
 
 on:
   schedule:
-    - cron: '0 22 * * 1-5'
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 permissions:

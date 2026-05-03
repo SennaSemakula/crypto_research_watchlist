@@ -1,0 +1,58 @@
+name: Intraday scan + alert
+
+# Hourly intraday scan. Refreshes news + market data, detects material
+# changes vs the prior snapshot, fires Telegram only when something has
+# moved. Crypto is 24/7 so daily cadence is insufficient. The DB commit
+# step is what carries score state across runs.
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # every hour at :00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: intraday
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - run: uv pip install --system -e .
+
+      - name: Intraday scan + alert
+        env:
+          TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED || 'true' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CRYPTOPANIC_API_KEY: ${{ secrets.CRYPTOPANIC_API_KEY }}
+          DATABASE_URL: sqlite:///crypto_research_watchlist.db
+          PAPER_TRADING: '1'
+        run: python -m crypto_research_watchlist intraday --send-telegram
+
+      - name: Persist DB across runs (commit)
+        run: |
+          git config user.email "senna.semakula@gmail.com"
+          git config user.name "Senna Semakula-Buuza"
+          git add crypto_research_watchlist.db 2>/dev/null || true
+          if git diff --cached --quiet; then echo "no db changes"; exit 0; fi
+          git commit -m "intraday: snapshot $(date -u +%H:%MZ)"
+          git pull --rebase origin main
+          git push origin main
