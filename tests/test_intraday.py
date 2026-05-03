@@ -186,6 +186,11 @@ def _set_env(monkeypatch, db_url: str) -> None:
     monkeypatch.delenv("TELEGRAM_ENABLED", raising=False)
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    # Drop optional API keys so the news refresh inside run_once stays
+    # purely offline and these tests don't pick up live high-impact news.
+    monkeypatch.delenv("CRYPTOCOMPARE_API_KEY", raising=False)
+    monkeypatch.delenv("CRYPTOPANIC_API_KEY", raising=False)
+    monkeypatch.delenv("ETHERSCAN_API_KEY", raising=False)
 
 
 def test_intraday_no_prior_scores_does_not_alert(tmp_path, monkeypatch, runner):

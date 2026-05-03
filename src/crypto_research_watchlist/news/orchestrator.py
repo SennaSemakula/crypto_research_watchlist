@@ -45,8 +45,8 @@ def refresh_news(
             universe_symbols = None
 
     fetchers = (
-        ("cryptopanic", lambda: sources.fetch_cryptopanic(
-            http=http, currencies=universe_symbols, limit=50,
+        ("cryptocompare", lambda: sources.fetch_cryptocompare(
+            http=http, limit=50,
         )),
         ("coindesk", lambda: sources.fetch_coindesk_rss(http=http, limit=50)),
         ("cointelegraph", lambda: sources.fetch_cointelegraph_rss(http=http, limit=50)),

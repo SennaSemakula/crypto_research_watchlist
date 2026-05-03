@@ -5,7 +5,8 @@ network errors (it logs and returns []). Tests inject a mock httpx
 client; production uses ``httpx.Client``.
 
 Supported sources:
-  - CryptoPanic free Developer plan (env CRYPTOPANIC_API_KEY).
+  - CryptoCompare News API (env CRYPTOCOMPARE_API_KEY). Replaced
+    CryptoPanic after the Developer tier was discontinued 2026-04-01.
   - CoinDesk RSS.
   - CoinTelegraph RSS.
   - Reddit r/cryptocurrency JSON.
@@ -97,23 +98,54 @@ def _extract_tickers_from_title(title: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# CryptoPanic
+# CryptoCompare News API
+# CryptoCompare replaces CryptoPanic (Developer tier discontinued 2026-04-01).
 # ---------------------------------------------------------------------------
 
-CRYPTOPANIC_URL = "https://cryptopanic.com/api/v1/posts/"
+CRYPTOCOMPARE_NEWS_URL = "https://min-api.cryptocompare.com/data/v2/news/"
+
+# Universe symbols we expect; map ticker -> canonical -USD form.
+_UNIVERSE_TICKERS = {
+    "BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "AVAX", "DOT", "LINK", "MATIC",
+}
 
 
-def fetch_cryptopanic(
+def _categories_to_universe(categories: str | None) -> list[str]:
+    """Parse CryptoCompare's pipe-delimited ``categories`` field into our
+    universe-style symbols (``BTC`` -> ``BTC-USD``). Non-coin tags
+    (``Trading``, ``Regulation``, etc.) are dropped.
+    """
+    if not categories:
+        return []
+    found: set[str] = set()
+    for tok in categories.split("|"):
+        tok = tok.strip().upper()
+        if not tok:
+            continue
+        # CryptoCompare sometimes uses POL for Polygon's new token symbol;
+        # collapse onto MATIC to match our universe.
+        if tok == "POL":
+            tok = "MATIC"
+        if tok in _UNIVERSE_TICKERS:
+            found.add(f"{tok}-USD")
+    return sorted(found)
+
+
+def fetch_cryptocompare(
     *,
     http: _HTTPClient | None = None,
     api_key: str | None = None,
-    currencies: list[str] | None = None,
     limit: int = 50,
 ) -> list[NewsArticleDTO]:
-    """Fetch hot CryptoPanic posts. Returns [] if no API key is configured."""
-    api_key = api_key or os.environ.get("CRYPTOPANIC_API_KEY") or os.environ.get("CRYPTOPANIC_KEY")
+    """Fetch latest English news from CryptoCompare. Returns [] if no key.
+
+    The free tier is generous (~100k calls/month) but we cap each pull at
+    ``limit`` (default 50) and rely on store dedup to handle repeats.
+    Auth is via the ``Authorization: Apikey <KEY>`` header per the docs.
+    """
+    api_key = api_key or os.environ.get("CRYPTOCOMPARE_API_KEY") or None
     if not api_key:
-        logger.info("CryptoPanic key absent, skipping CryptoPanic fetch")
+        logger.info("CryptoCompare key absent, skipping CryptoCompare fetch")
         return []
     if http is None:
         try:
@@ -122,43 +154,53 @@ def fetch_cryptopanic(
         except Exception as exc:
             logger.warning("httpx unavailable: %s", exc)
             return []
-    params = {
-        "auth_token": api_key,
-        "filter": "hot",
-        "kind": "news",
-    }
-    if currencies:
-        # CryptoPanic accepts up to 50 currencies. Strip -USD suffix.
-        clean = [c.split("-")[0].upper() for c in currencies]
-        params["currencies"] = ",".join(clean[:50])
+
+    params = {"lang": "EN"}
+    headers = {"Authorization": f"Apikey {api_key}"}
     try:
-        resp = http.get(CRYPTOPANIC_URL, params=params)
+        resp = http.get(CRYPTOCOMPARE_NEWS_URL, params=params, headers=headers)
         resp.raise_for_status()
-        data = resp.json()
+        data = resp.json() or {}
     except Exception as exc:
-        logger.warning("CryptoPanic fetch failed: %s", exc)
+        logger.warning("CryptoCompare fetch failed: %s", exc)
         return []
 
     out: list[NewsArticleDTO] = []
-    for row in (data.get("results") or [])[:limit]:
-        url = row.get("url") or row.get("source", {}).get("domain") or ""
+    for row in (data.get("Data") or [])[:limit]:
+        url = row.get("url") or ""
         title = row.get("title") or ""
         if not url or not title:
             continue
-        tagged = [
-            (c.get("code") or "").upper()
-            for c in (row.get("currencies") or [])
-            if c.get("code")
-        ]
+        body = row.get("body") or None
+        if body and len(body) > 1000:
+            body = body[:1000]
+        ts = row.get("published_on")
+        try:
+            published_at = (
+                datetime.fromtimestamp(float(ts), tz=timezone.utc)
+                if ts is not None
+                else _utcnow()
+            )
+        except Exception:
+            published_at = _utcnow()
+        tagged = _categories_to_universe(row.get("categories"))
         if not tagged:
-            tagged = _extract_tickers_from_title(title)
+            tagged = [
+                f"{t}-USD" for t in _extract_tickers_from_title(title)
+                if t in _UNIVERSE_TICKERS
+            ]
         out.append(NewsArticleDTO(
-            source="cryptopanic",
+            source="cryptocompare",
             url=url,
             title=title,
-            published_at=_parse_iso(row.get("published_at")),
+            body=body,
+            published_at=published_at,
             raw_currencies=tagged,
-            raw={"votes": row.get("votes"), "domain": row.get("source", {}).get("domain")},
+            raw={
+                "publisher": row.get("source"),
+                "id": row.get("id"),
+                "categories": row.get("categories"),
+            },
         ))
     return out
 

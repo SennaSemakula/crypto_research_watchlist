@@ -42,7 +42,9 @@ class EnvSettings:
 
     # Third-party data API keys (all optional; modules degrade gracefully).
     coingecko_api_key: str | None = None
-    cryptopanic_api_key: str | None = None
+    cryptocompare_api_key: str | None = None
+    etherscan_api_key: str | None = None
+    fred_api_key: str | None = None
 
     @classmethod
     def from_env(cls) -> EnvSettings:
@@ -60,7 +62,9 @@ class EnvSettings:
             telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID") or None,
             paper_trading=_truthy(os.getenv("PAPER_TRADING", "1")),
             coingecko_api_key=os.getenv("COINGECKO_API_KEY") or None,
-            cryptopanic_api_key=os.getenv("CRYPTOPANIC_API_KEY") or None,
+            cryptocompare_api_key=os.getenv("CRYPTOCOMPARE_API_KEY") or None,
+            etherscan_api_key=os.getenv("ETHERSCAN_API_KEY") or None,
+            fred_api_key=os.getenv("FRED_API_KEY") or None,
         )
 
 

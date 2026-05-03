@@ -38,41 +38,6 @@ class _MockHttp:
         raise RuntimeError(f"no mock response for {url}")
 
 
-def test_cryptopanic_skips_without_key(monkeypatch):
-    monkeypatch.delenv("CRYPTOPANIC_API_KEY", raising=False)
-    monkeypatch.delenv("CRYPTOPANIC_KEY", raising=False)
-    out = sources.fetch_cryptopanic(http=_MockHttp({}), api_key=None)
-    assert out == []
-
-
-def test_cryptopanic_parses_results():
-    payload = {
-        "results": [
-            {
-                "title": "BTC ETF approved by SEC",
-                "url": "https://example.com/btc",
-                "published_at": "2026-05-02T12:00:00Z",
-                "currencies": [{"code": "BTC"}, {"code": "ETH"}],
-                "votes": {"positive": 12, "negative": 2},
-                "source": {"domain": "example.com"},
-            },
-            {
-                "title": "Solana network outage",
-                "url": "https://example.com/sol",
-                "published_at": "2026-05-02T11:00:00Z",
-                "currencies": [{"code": "SOL"}],
-                "source": {"domain": "example.com"},
-            },
-        ],
-    }
-    http = _MockHttp({sources.CRYPTOPANIC_URL: _MockResp(json_data=payload)})
-    out = sources.fetch_cryptopanic(http=http, api_key="fake-key", currencies=["BTC-USD"])
-    assert len(out) == 2
-    assert out[0].source == "cryptopanic"
-    assert "BTC" in out[0].raw_currencies
-    assert out[1].raw_currencies == ["SOL"]
-
-
 def test_parse_rss_extracts_tickers():
     rss = """<?xml version="1.0"?>
     <rss version="2.0"><channel>
