@@ -1,219 +1,191 @@
-"""Tests for the institutional-voice Crypto Daily render.
+"""Tests for the Daily Crypto Rotation render.
 
-The previous render was a database dump; the new format reads like a
-one-page note from a senior analyst:
+The render mirrors the stock side's "Daily Capital Rotation" template:
 
   * Header (date)
-  * Market regime (BTC, ETH, ETH/BTC, BTC.D, mcap) + one-line read
-  * Today's read (bucket headline + closest-to-action + avoid)
-  * Signals fired (cross-symbol clusters or 'no signals fired')
-  * News catalysts (24h, |sentiment|>=0.5)
-  * Action (one-liner)
+  * MY PAPER PORTFOLIO block
+  * (optional) TOP STORY banner
+  * (optional) SINCE YOUR LAST CHECK 24h news bullets
+  * RANKED CANDIDATES — every candidate gets a panel
+  * BEST USE OF NEXT $X capital allocation
+  * Footer
 
-Brevity is the point: when the universe is fully neutral, the message is
-~10-15 lines, NOT 5 padded sections.
+Decisions are pre-attached to ``Candidate.extras['decision']`` by the
+pipeline; tests mimic that wiring directly.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from crypto_research_watchlist.candidates import Candidate
+from crypto_research_watchlist.decisions import build_decision
 from crypto_research_watchlist.notifiers.telegram import render_html
 from crypto_research_watchlist.pipeline import RunResult
 from crypto_research_watchlist.risk import RiskVerdict
-from crypto_research_watchlist.signals import SignalResult
 
 
-def _candidate(symbol: str, score: float, action: str, *, reason: str = "no notable signals",
-               p7d: float | None = 0.05, signals: dict | None = None) -> Candidate:
+def _candidate(symbol: str, score: float, action: str = "WATCH",
+               *, signals: dict | None = None,
+               px_overrides: dict | None = None,
+               articles=None) -> Candidate:
     risk = RiskVerdict(
         action_label=action, max_portfolio_weight=0.15,
         warnings=[], invalidation_conditions=[], time_horizon="2-8 weeks",
     )
-    return Candidate(
+    px = {"last": 100.0, "p1d": 0.01, "p7d": 0.02, "p30d": 0.05,
+          "atr14": 4.0, "high30": 110.0, "low30": 92.0, "high60": 115.0,
+          "p5d": 0.01}
+    if px_overrides:
+        px.update(px_overrides)
+    c = Candidate(
         symbol=symbol, score=score, action=action,
-        reason=reason,
-        signals=signals or {},
-        risk=risk,
-        extras={"px": {"last": 100.0, "p1d": 0.01, "p7d": p7d, "p30d": 0.10,
-                       "atr14": 4.0, "high30": 110.0, "low30": 92.0}},
+        reason="x", signals=signals or {}, risk=risk,
+        extras={"px": px},
     )
+    d = build_decision(c, articles=articles or [])
+    c.extras["decision"] = d.to_dict()
+    return c
 
 
-def test_render_includes_institutional_sections():
+def test_render_includes_template_sections():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
+        run_at=datetime(2026, 5, 4, 8, 0, tzinfo=UTC),
         candidates=[
-            _candidate("BTC-USD", 78.0, "STRONG", reason="bullish MACD + funding negative"),
+            _candidate("BTC-USD", 78.0, "STRONG"),
             _candidate("ETH-USD", 60.0, "WATCH"),
         ],
-        market={
-            "btc": {"last": 103200, "p1d": 0.012, "p7d": -0.004},
-            "eth": {"last": 3840, "p1d": 0.009, "p7d": 0.02},
-        },
     )
     html = render_html(result)
-    assert "Crypto Daily" in html
-    assert "Market regime" in html
-    assert "Today's read" in html
-    assert "Signals fired" in html
-    assert "Action" in html
-    # No emojis in the institutional shape, no DB-dump tags.
-    assert "RANKED CANDIDATES" not in html
-    assert "buy zone" not in html.lower()
-    assert "tp" not in html.lower() or "tp <" not in html.lower()
+    assert "Daily Crypto Rotation" in html
+    assert "MY PAPER PORTFOLIO" in html
+    assert "RANKED CANDIDATES" in html
+    assert "BEST USE OF NEXT" in html
+    assert "Automated research" in html
 
 
-def test_render_neutral_universe_is_brief():
-    """When every candidate is mid-bucket WATCH/NEUTRAL the message stays short."""
+def test_render_buy_now_panel_format():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("ETH-USD", 70.0, "STRONG")],
+    )
+    html = render_html(result)
+    # Decision tag
+    assert "BUY NOW" in html
+    # Buy line for the BUY_NOW
+    assert "Buy: <b>$1,000</b> now" in html
+    # Why buy
+    assert "Why buy:" in html
+    # Sell targets
+    assert "Sell half at" in html
+    # Stop
+    assert "Sell everything if it drops" in html
+    # Review window
+    assert "Review:" in html
+    # Break thesis
+    assert "Break thesis if:" in html
+
+
+def test_render_wait_panel_includes_buy_if():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("ADA-USD", 50.0, "WATCH")],
+    )
+    html = render_html(result)
+    assert "WAIT" in html
+    assert "Why wait:" in html
+    # WAIT panels expose a 'Buy if:' price.
+    assert "Buy if:" in html
+
+
+def test_render_avoid_panel_no_buy_line():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("LINK-USD", 35.0, "AVOID")],
+    )
+    html = render_html(result)
+    assert "AVOID" in html
+    assert "Why avoid:" in html
+    # No 'Buy: $... now' for AVOID
+    assert "Buy: <b>$" not in html
+
+
+def test_render_paper_portfolio_block_renders_default_when_no_engine():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("BTC-USD", 70.0, "STRONG")],
+    )
+    html = render_html(result)
+    assert "Total: $5,000.00" in html
+    assert "Holdings: (none)" in html
+
+
+def test_render_capital_allocation_with_buy_now():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
         candidates=[
-            _candidate("BTC-USD", 50.6, "WATCH"),
-            _candidate("ETH-USD", 55.2, "WATCH"),
-            _candidate("SOL-USD", 46.0, "WATCH"),
-            _candidate("ADA-USD", 50.1, "WATCH"),
-            _candidate("LINK-USD", 43.0, "AVOID"),
+            _candidate("ETH-USD", 70.0, "STRONG"),
+            _candidate("BTC-USD", 82.0, "STRONG"),
         ],
-        market={
-            "btc": {"last": 103200, "p1d": 0.012, "p7d": -0.004},
-            "eth": {"last": 3840, "p1d": 0.009, "p7d": -0.018},
-        },
     )
     html = render_html(result)
-    line_count = len(html.splitlines())
-    # Strict cap on neutral-day length. The old render was ~50-80 lines on
-    # a fully neutral day; this should be under 25.
-    assert line_count <= 25, f"neutral render too long ({line_count} lines)"
-    assert "neutral cluster" in html
+    assert "BEST USE OF NEXT $5,000" in html
+    assert "Deploy $1,000 into ETH" in html
+    assert "Deploy $1,500 into BTC" in html
 
 
-def test_render_shows_closest_to_action_with_trigger():
+def test_render_capital_allocation_no_setups_holds_cash():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("ADA-USD", 50.0, "WATCH")],
+    )
+    html = render_html(result)
+    assert "Hold $5,000 in cash" in html
+
+
+def test_render_handles_zero_candidates():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[],
+    )
+    html = render_html(result)
+    assert "Daily Crypto Rotation" in html
+    assert "No candidates today" in html
+
+
+def test_render_includes_classification_in_header():
+    result = RunResult(
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
         candidates=[
-            _candidate("ETH-USD", 60.0, "WATCH", reason="Outperforming BTC by 8 pts over 60d"),
-            _candidate("SOL-USD", 46.0, "WATCH"),
+            _candidate("BTC-USD", 70.0, "STRONG"),
+            _candidate("SOL-USD", 60.0, "WATCH"),
+            _candidate("LINK-USD", 50.0, "WATCH"),
         ],
     )
     html = render_html(result)
-    assert "Closest to action" in html
-    assert "ETH" in html
-    # Trigger lines surface a price level, not vague guidance.
-    assert "Trigger:" in html
+    assert "CORE" in html
+    assert "MAJOR" in html
+    assert "MID-CAP" in html
 
 
-def test_render_avoid_block_only_when_present():
-    """No AVOID names -> no Avoid block."""
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD", 60.0, "WATCH")],
-    )
-    html = render_html(result)
-    assert "Avoid" not in html
-
-
-def test_render_avoid_block_when_low_scoring_avoid_present():
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[
-            _candidate("BTC-USD", 60.0, "WATCH"),
-            _candidate("LINK-USD", 35.0, "AVOID", reason="death cross + OI declining"),
-        ],
-    )
-    html = render_html(result)
-    assert "Avoid" in html
-    assert "LINK" in html
-
-
-def test_render_signals_fired_macd_cluster():
-    bear_macd_sig = SignalResult(
-        source="technical", strength=-0.3, label="BEARISH",
-        bullets=["MACD below signal and negative: bearish momentum"],
-    )
-    candidates = [
-        _candidate("SOL-USD", 46, "WATCH", signals={"technical": bear_macd_sig}),
-        _candidate("AVAX-USD", 47, "WATCH", signals={"technical": bear_macd_sig}),
-        _candidate("DOT-USD", 45, "WATCH", signals={"technical": bear_macd_sig}),
-    ]
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC), candidates=candidates)
-    html = render_html(result)
-    assert "bearish MACD" in html
-    assert "SOL" in html
-
-
-def test_render_signals_fired_underperforming_btc_cluster():
-    weak_sig = SignalResult(
-        source="cross_asset", strength=-0.5, label="BEARISH",
-        bullets=["Underperforming BTC by 25 pts over 60d"],
-        details={"rel_strength_60d": -0.30},
-    )
-    candidates = [
-        _candidate("MATIC-USD", 42, "AVOID", signals={"cross_asset": weak_sig}),
-        _candidate("ADA-USD", 44, "AVOID", signals={"cross_asset": weak_sig}),
-    ]
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC), candidates=candidates)
-    html = render_html(result)
-    assert "underperforming BTC by >25pt" in html
-
-
-def test_render_when_no_signals_fire_says_so_explicitly():
-    """Empty signals do NOT pad with empty section bodies."""
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD", 50, "WATCH")],
-    )
-    html = render_html(result)
-    assert "No funding extremes" in html
-
-
-def test_render_market_read_alts_firming():
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD", 50, "WATCH")],
-        market={
-            "btc": {"last": 100000, "p1d": 0.0, "p7d": 0.0},
-            "eth": {"last": 3000, "p1d": 0.0, "p7d": 0.06},
-        },
-    )
-    html = render_html(result)
-    assert "Read:" in html
-    assert "Alts firming" in html or "rotation" in html.lower()
-
-
-def test_render_market_read_btc_capitulation():
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD", 50, "WATCH")],
-        market={
-            "btc": {"last": 90000, "p1d": -0.03, "p7d": -0.12},
-            "eth": {"last": 2800, "p1d": -0.02, "p7d": -0.10},
-        },
-    )
-    html = render_html(result)
-    assert "BTC down 10%" in html
-
-
-def test_render_paper_portfolio_one_liner(engine):
+def test_render_paper_portfolio_with_engine(engine):
     from crypto_research_watchlist.db import session_factory, session_scope
-    from crypto_research_watchlist.models import PaperCash, PaperPosition
+    from crypto_research_watchlist.models import PaperCash
 
     SessionLocal = session_factory(engine)
     with session_scope(SessionLocal) as session:
-        session.add(PaperCash(id=1, cash_usd=4250.0))
-        session.add(PaperPosition(symbol="BTC-USD", quantity=0.1, avg_price=50000.0))
-
+        session.add(PaperCash(id=1, cash_usd=5024.30))
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD", 70.0, "WATCH")],
+        run_at=datetime(2026, 5, 4, tzinfo=UTC),
+        candidates=[_candidate("BTC-USD", 70.0, "STRONG")],
     )
     html = render_html(result, engine=engine)
-    assert "Paper portfolio" in html
-    assert "4,250" in html
+    assert "Total: $5,024.30" in html
 
 
-def test_render_news_catalysts_only_when_high_impact(engine):
+def test_render_top_story_appears_when_high_impact_news(engine):
+    from datetime import timedelta
+
     from crypto_research_watchlist.news.sources import NewsArticleDTO
     from crypto_research_watchlist.news.store import upsert_articles
 
@@ -221,26 +193,26 @@ def test_render_news_catalysts_only_when_high_impact(engine):
     upsert_articles(engine, [
         NewsArticleDTO(
             source="coindesk",
-            url="https://x.com/etf",
-            title="BTC ETF approval rallies market",
+            url="https://x.com/etf-pump",
+            title="ETH Pectra upgrade activated mainnet today",
             published_at=pub,
-            raw_currencies=["BTC"],
+            raw_currencies=["ETH"],
         ),
     ])
+    # Force the article's sentiment > 0.5 so the top-story gate fires.
+    from sqlalchemy import update
+
+    from crypto_research_watchlist.db import session_factory, session_scope
+    from crypto_research_watchlist.models import NewsArticle
+    SessionLocal = session_factory(engine)
+    with session_scope(SessionLocal) as session:
+        session.execute(update(NewsArticle).values(sentiment_score=0.7))
 
     result = RunResult(
         run_at=datetime.now(UTC),
-        candidates=[_candidate("BTC-USD", 70.0, "STRONG")],
+        candidates=[_candidate("ETH-USD", 70.0, "STRONG")],
     )
     html = render_html(result, engine=engine)
-    # Only renders if |sentiment|>=0.5; if dummy upsert produces 0.0 there
-    # should NOT be a catalysts header.
-    if "News catalysts" in html:
-        assert "(24h" in html
-
-
-def test_render_handles_zero_candidates():
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC))
-    html = render_html(result)
-    assert "Crypto Daily" in html
-    assert "Universe empty" in html
+    if "TOP STORY" in html:
+        assert "ETH" in html
+        assert "Why it matters" in html

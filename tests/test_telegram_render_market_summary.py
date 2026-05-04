@@ -1,11 +1,9 @@
-"""Telegram render tests for the CoinGecko market summary line.
+"""Render tests for benchmarks block in the rotation template.
 
-Verifies the Market regime block extends with BTC.D / total mcap when
-result.market["summary"] is present, and renders cleanly when absent.
-
-The institutional-voice render renders the summary inline on the second
-market line ("ETH/BTC ... | BTC.D ... | Total mcap ..."), not as a
-separate block.
+The new render surfaces market context as benchmark deltas in the
+``MY PAPER PORTFOLIO`` block (``vs benchmarks: You +X.X%  ·  BTC ...``).
+The full ``MarketSummary`` is no longer rendered as a regime line;
+benchmarks summarise it.
 """
 
 from __future__ import annotations
@@ -14,6 +12,7 @@ from datetime import UTC, datetime
 
 from crypto_research_watchlist.candidates import Candidate
 from crypto_research_watchlist.data.coingecko_provider import MarketSummary
+from crypto_research_watchlist.decisions import build_decision
 from crypto_research_watchlist.notifiers.telegram import render_html
 from crypto_research_watchlist.pipeline import RunResult
 from crypto_research_watchlist.risk import RiskVerdict
@@ -24,14 +23,17 @@ def _candidate(symbol: str) -> Candidate:
         action_label="STRONG", max_portfolio_weight=0.15,
         warnings=[], invalidation_conditions=[], time_horizon="2-8 weeks",
     )
-    return Candidate(
+    c = Candidate(
         symbol=symbol, score=70.0, action="STRONG",
         reason="ok",
         signals={},
         risk=risk,
         extras={"px": {"last": 100.0, "p1d": 0.0, "p7d": 0.01, "p30d": 0.05,
-                       "atr14": 4.0, "high30": 110.0, "low30": 92.0}},
+                       "atr14": 4.0, "high30": 110.0, "low30": 92.0,
+                       "high60": 115.0}},
     )
+    c.extras["decision"] = build_decision(c, articles=[]).to_dict()
+    return c
 
 
 def _summary(**overrides):
@@ -46,7 +48,7 @@ def _summary(**overrides):
     return MarketSummary(**base)
 
 
-def test_render_with_summary_includes_mcap_and_dominance():
+def test_render_with_market_data_includes_benchmarks_block():
     result = RunResult(
         run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
@@ -57,52 +59,35 @@ def test_render_with_summary_includes_mcap_and_dominance():
         },
     )
     html = render_html(result)
-    assert "Total mcap" in html
-    assert "BTC.D" in html
-    assert "$3.42T" in html
-    assert "52.3%" in html
+    # Benchmarks line shows BTC + ETH 24h prints.
+    assert "vs benchmarks" in html
+    assert "BTC +1.2%" in html
+    assert "ETH +0.9%" in html
 
 
-def test_render_without_summary_has_no_summary_line():
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD")],
-        market={
-            "btc": {"last": 103200.0, "p1d": 0.012, "p7d": -0.004},
-            "eth": {"last": 3840.0, "p1d": 0.009, "p7d": -0.018},
-            "summary": None,
-        },
-    )
-    html = render_html(result)
-    assert "Total mcap" not in html
-    assert "BTC.D" not in html
-    # And the existing block still renders.
-    assert "BTC $" in html
-    assert "ETH/BTC" in html
-
-
-def test_render_with_summary_missing_some_fields_partial_line():
-    """If CoinGecko returns a partial payload, only present fields render."""
-    s = _summary(eth_dominance_pct=None, total_volume_24h_usd=None)
-    result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=UTC),
-        candidates=[_candidate("BTC-USD")],
-        market={
-            "btc": {"last": 103200.0, "p1d": 0.0, "p7d": 0.0},
-            "eth": {"last": 3840.0, "p1d": 0.0, "p7d": 0.0},
-            "summary": s,
-        },
-    )
-    html = render_html(result)
-    assert "Total mcap" in html
-    assert "BTC.D 52.3%" in html
-
-
-def test_render_with_no_market_no_crash():
+def test_render_without_market_data_no_benchmarks_block():
+    """When market data is absent the line is suppressed cleanly."""
     result = RunResult(
         run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
         market={},
     )
     html = render_html(result)
-    assert "Crypto Daily" in html
+    assert "vs benchmarks" not in html
+    # Still renders the rest of the message.
+    assert "Daily Crypto Rotation" in html
+    assert "MY PAPER PORTFOLIO" in html
+
+
+def test_render_partial_market_data_shows_what_it_has():
+    result = RunResult(
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
+        candidates=[_candidate("BTC-USD")],
+        market={
+            "btc": {"last": 103200.0, "p1d": 0.0, "p7d": 0.0},
+            "summary": None,
+        },
+    )
+    html = render_html(result)
+    # Only BTC bench is present.
+    assert "BTC flat" in html or "BTC +0.0%" in html

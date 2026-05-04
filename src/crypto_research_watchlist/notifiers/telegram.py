@@ -1,29 +1,20 @@
-"""Telegram bot notifier — daily crypto watchlist render.
+"""Telegram bot notifier — daily crypto rotation render.
 
-Institutional-voice format. The previous render was a database dump
-(score table + 5 padded sections, even on neutral days). This render
-reads like a one-page note from a senior analyst:
+Mirrors the stock side's "Daily Capital Rotation" template:
 
-  Header              — date
-  Market regime       — BTC/ETH spot, ETH/BTC, BTC.D, total mcap, one-line read
-  Today's read        — spread bucket headline + closest-to-action names
-                        with specific triggers + names to avoid
-  Signals fired       — only when something actually fires (funding,
-                        OI, on-chain, news), one bullet per cluster
-  Action              — one liner: what to do, when next check fires
+  * Header with date.
+  * Paper portfolio block (cash + positions + PnL + benchmark deltas).
+  * Top story banner (single highest |sentiment| 24h headline).
+  * Since-your-last-check (24h news bullets, one per coin).
+  * Ranked candidates — every candidate gets a panel matching its
+    decision (BUY_NOW / STARTER / WAIT / AVOID).
+  * Best use of next $X — capital allocation suggestion.
+  * Footer.
 
-Principles:
-  * Bucket labels (STRONG/WATCH/NEUTRAL/AVOID) matter more than the
-    precise 0-100 score; show precise scores only when the universe is
-    differentiated (>15pt spread). Round to nearest 5 otherwise.
-  * Brevity is institutional — when there are no setups, the whole
-    message is ~10-15 lines. We do NOT pad with empty sections.
-  * Always end with action — what to do, when next.
-  * The render must work even when ALL signals are neutral. Today's
-    data is the test case for that.
-
-The render is HTML for Telegram (parse_mode=HTML). Long messages chunk
-on line boundaries via ``_chunk``. Score is 0-100 (post 2026-05).
+The CandidateDecision attached to each Candidate.extras carries the
+heavy lifting; this module is presentation. Multi-part chunking on
+section boundaries keeps the message under Telegram's 4096-char limit
+with ``(part X/Y)`` headers.
 """
 
 from __future__ import annotations
@@ -74,7 +65,7 @@ class TelegramNotifier:
             return NotificationOutcome(self.name, "disabled")
 
         body_html = render_html(result, engine=self._engine)
-        chunks = _chunk(body_html, limit=_MAX_PER_MESSAGE_CHARS)
+        chunks = _chunk_sections(body_html, limit=_MAX_PER_MESSAGE_CHARS)
 
         http = self._http or _make_httpx()
         sent = 0
@@ -108,7 +99,7 @@ class TelegramNotifier:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Formatting helpers
 # ---------------------------------------------------------------------------
 
 
@@ -119,6 +110,10 @@ def _escape(text: str) -> str:
         .replace("<", "&lt;")
         .replace(">", "&gt;")
     )
+
+
+def _short_symbol(sym: str) -> str:
+    return sym.split("-")[0].upper() if sym else "?"
 
 
 def _fmt_price(p: float | None) -> str:
@@ -132,7 +127,6 @@ def _fmt_price(p: float | None) -> str:
 
 
 def _fmt_pct(p: float | None) -> str:
-    """+1.2% / -0.4% / flat. None -> empty string so callers can filter."""
     if p is None:
         return ""
     if abs(p) < 0.001:
@@ -142,19 +136,13 @@ def _fmt_pct(p: float | None) -> str:
 
 
 def _to_score_pct(raw_score: float) -> int:
-    """Score is 0-100 post-migration; legacy [-1, +1] auto-rescales."""
     raw = float(raw_score or 0.0)
     if -1.5 <= raw <= 1.5:
         raw = (raw + 1.0) * 50.0
     return int(round(max(0.0, min(100.0, raw))))
 
 
-def _round_to_5(score_pct: int) -> int:
-    return int(round(score_pct / 5.0)) * 5
-
-
 def _bucket(action: str, score_pct: int) -> str:
-    """Display bucket. Distinct from action so we can call mid-WATCH a NEUTRAL."""
     if action == "STRONG":
         return "STRONG"
     if action == "WATCH" and score_pct >= 60:
@@ -179,336 +167,469 @@ def _fmt_mcap(value: float | None) -> str:
     return f"${value:,.0f}"
 
 
+_DECISION_PRIMARY_EMOJI = {
+    "BUY_NOW": "\U0001F7E2",
+    "STARTER": "\U0001F7E1",
+    "WAIT": "\U0001F7E0",
+    "AVOID": "\U0001F6AB",
+}
+
+_DECISION_LABEL_TOKEN = {
+    "BUY_NOW": "\U0001F7E2 BUY NOW",
+    "STARTER": "\U0001F7E1 STARTER",
+    "WAIT": "\U0001F7E0 WAIT",
+    "AVOID": "\U0001F6AB AVOID",
+}
+
+_TAG_EMOJI = {
+    "material event": "⚡",
+    "breaking positive": "\U0001F7E2",
+    "breaking negative": "\U0001F534",
+    "chase trap": "\U0001F6AB",
+    "at 60d peak": "⚠️",
+    "DIP -10% 5d": "✅",
+    "OI surge": "\U0001F525",
+}
+
+
+_SYMBOL_TO_NAME = {
+    "BTC": "Bitcoin",
+    "ETH": "Ethereum",
+    "SOL": "Solana",
+    "BNB": "BNB",
+    "XRP": "XRP",
+    "ADA": "Cardano",
+    "AVAX": "Avalanche",
+    "DOT": "Polkadot",
+    "LINK": "Chainlink",
+    "MATIC": "Polygon",
+    "POL": "Polygon",
+}
+
+
+def _coin_full_name(symbol: str) -> str:
+    sym = _short_symbol(symbol)
+    return _SYMBOL_TO_NAME.get(sym, sym)
+
+
 # ---------------------------------------------------------------------------
 # Sections
 # ---------------------------------------------------------------------------
 
 
-def _market_regime_lines(market: dict | None) -> list[str]:
-    """Market regime block. ~3 lines. Includes a one-line analyst read."""
-    if not market:
-        return []
+def _header_section(result: RunResult) -> list[str]:
+    date_str = result.run_at.strftime("%Y-%m-%d")
+    return [
+        f"\U0001F4CA <b>Daily Crypto Rotation — {_escape(date_str)}</b>",
+    ]
+
+
+def _paper_portfolio_section(result: RunResult, engine) -> list[str]:
+    """My paper portfolio block. Always shown (even with no positions).
+
+    Pulls cash + positions from the paper-trading tables when ``engine``
+    is supplied; otherwise renders a default $5000 cash empty book."""
+    cash = 5000.0
+    holdings: list = []
+    positions_value = 0.0
+    pnl_total = cash - 5000.0
+
+    if engine is not None:
+        try:
+            from sqlalchemy import select
+
+            from ..db import session_factory, session_scope
+            from ..models import PaperCash, PaperPosition
+            SessionLocal = session_factory(engine)
+            with session_scope(SessionLocal) as session:
+                cash_row = session.get(PaperCash, 1)
+                if cash_row is not None:
+                    cash = float(cash_row.cash_usd)
+                positions = list(session.scalars(select(PaperPosition)).all())
+                for p in positions:
+                    qty = float(p.quantity or 0.0)
+                    if qty <= 0:
+                        continue
+                    avg = float(p.avg_price or 0.0)
+                    holdings.append((p.symbol, qty, avg))
+                    positions_value += qty * avg
+        except Exception:
+            pass
+
+    total = cash + positions_value
+    deployed = positions_value
+    pnl_total = total - 5000.0
+    pnl_pct = pnl_total / 5000.0 if 5000.0 else 0.0
+    pnl_emoji = "\U0001F7E2" if pnl_total >= 0 else "\U0001F534"
+    sign = "+" if pnl_total >= 0 else ""
+    pnl_pct_sign = "+" if pnl_pct >= 0 else ""
+    deployed_repr = f"${deployed:,.0f}" if deployed else "$0"
+
+    lines: list[str] = []
+    lines.append("\U0001F4BC <b>MY PAPER PORTFOLIO</b>")
+    lines.append(
+        f"   Total: ${total:,.2f}  (cash ${cash:,.2f} + positions ${positions_value:,.2f})"
+    )
+    lines.append(
+        f"   PnL: {pnl_emoji} ${sign}{pnl_total:,.2f} ({pnl_pct_sign}{pnl_pct * 100:.2f}%)"
+        f" on {deployed_repr} deployed"
+    )
+    if holdings:
+        bits = ", ".join(
+            f"{_short_symbol(s)} {qty:.4f}@${avg:,.0f}" for s, qty, avg in holdings
+        )
+        lines.append(f"   Holdings: {bits}")
+    else:
+        lines.append("   Holdings: (none)")
+
+    bench_parts = _benchmark_parts(result)
+    if bench_parts:
+        lines.append("   vs benchmarks: You " + _fmt_pct(pnl_pct) + bench_parts)
+    return lines
+
+
+def _benchmark_parts(result: RunResult) -> str:
+    """ ' · BTC +2.4%  · ETH +0.8%  · Total mcap +1.5%' """
+    market = result.market or {}
     btc = market.get("btc") or {}
     eth = market.get("eth") or {}
     summary = market.get("summary")
-    if not btc.get("last") and not eth.get("last") and summary is None:
-        return []
-
-    lines: list[str] = ["<b>Market regime</b>"]
-
-    btc_line_parts: list[str] = []
-    if btc.get("last") is not None:
-        moves = []
-        for k, label in (("p1d", "24h"), ("p7d", "7d")):
-            if btc.get(k) is not None:
-                moves.append(f"{_fmt_pct(btc[k])} {label}")
-        moves_str = f" ({', '.join(moves)})" if moves else ""
-        btc_line_parts.append(f"BTC {_fmt_price(btc['last'])}{moves_str}")
-    if eth.get("last") is not None:
-        eth_moves = []
-        for k, label in (("p1d", "24h"), ("p7d", "7d")):
-            if eth.get(k) is not None:
-                eth_moves.append(f"{_fmt_pct(eth[k])} {label}")
-        eth_str = f" ({', '.join(eth_moves)})" if eth_moves else ""
-        btc_line_parts.append(f"ETH {_fmt_price(eth['last'])}{eth_str}")
-    if btc_line_parts:
-        lines.append("  " + " | ".join(btc_line_parts))
-
-    # ETH/BTC + dominance.
-    second_parts: list[str] = []
-    if btc.get("last") and eth.get("last"):
-        second_parts.append(f"ETH/BTC {eth['last'] / btc['last']:.4f}")
+    parts: list[str] = []
+    if btc.get("p1d") is not None:
+        parts.append(f"BTC {_fmt_pct(btc['p1d'])}")
+    if eth.get("p1d") is not None:
+        parts.append(f"ETH {_fmt_pct(eth['p1d'])}")
+    # Total mcap: we don't have a 24h % field; use a flat '(?)' if absent.
     if summary is not None:
-        btc_d = getattr(summary, "btc_dominance_pct", None)
-        if btc_d is not None:
-            second_parts.append(f"BTC.D {btc_d:.1f}%")
-        mcap = getattr(summary, "total_market_cap_usd", None)
-        if mcap is not None:
-            second_parts.append(f"Total mcap {_fmt_mcap(mcap)}")
-        vol = getattr(summary, "total_volume_24h_usd", None)
-        if vol is not None:
-            second_parts.append(f"24h vol {_fmt_mcap(vol)}")
-    if second_parts:
-        lines.append("  " + " | ".join(second_parts))
-
-    # One-line analyst read derived from BTC.D + ETH 7d move.
-    read = _market_read(btc=btc, eth=eth, summary=summary)
-    if read:
-        lines.append(f"  <i>Read:</i> {_escape(read)}")
-    lines.append("")
-    return lines
+        mcap_chg = getattr(summary, "total_market_cap_change_24h", None)
+        if mcap_chg is not None:
+            parts.append(f"Total mcap {_fmt_pct(mcap_chg / 100.0 if abs(mcap_chg) > 1 else mcap_chg)}")
+    if not parts:
+        return ""
+    return "  ·  " + "  ·  ".join(parts)
 
 
-def _market_read(*, btc: dict, eth: dict, summary) -> str | None:
-    """One-sentence institutional read on the regime."""
-    btc_d = getattr(summary, "btc_dominance_pct", None) if summary is not None else None
-    eth_7d = eth.get("p7d")
-    btc_7d = btc.get("p7d")
-
-    # Capitulation / firm BTC moves first.
-    if btc_7d is not None and btc_7d <= -0.10:
-        return "BTC down 10%+ on the week. Risk-off; sit on hands until BTC stabilises."
-    if btc_7d is not None and btc_7d >= 0.10:
-        return "BTC firm 7d. Lean long on dips; fade chase entries."
-
-    # ETH/BTC rotation read.
-    if btc.get("last") and eth.get("last") and eth_7d is not None and btc_7d is not None:
-        rel = eth_7d - btc_7d
-        if rel >= 0.05:
-            return "Alts firming vs BTC. Rotation window opening; watch high-beta names."
-        if rel <= -0.05:
-            return "BTC outpacing alts. Alt rotation muted; stay in BTC/ETH or cash."
-
-    # Dominance fallback.
-    if btc_d is not None:
-        if btc_d >= 60:
-            return "BTC dominance elevated. Alts under pressure; size accordingly."
-        if btc_d <= 50:
-            return "BTC dominance below 50%. Alt season conditions."
-
-    return "Neutral regime. No edge from the macro tape today."
-
-
-def _todays_read(candidates) -> list[str]:
-    """The institutional one-pager: bucket headline + names to watch + names to avoid."""
-    if not candidates:
-        return ["<b>Today's read</b>", "  Universe empty.", ""]
-
-    scores = [_to_score_pct(c.score) for c in candidates]
-    spread = max(scores) - min(scores) if scores else 0
-    buckets = {"STRONG": [], "WATCH": [], "NEUTRAL": [], "AVOID": [], "NO_DATA": []}
-    for c in candidates:
-        s_pct = _to_score_pct(c.score)
-        buckets[_bucket(c.action, s_pct)].append((c, s_pct))
-
-    lines: list[str] = ["<b>Today's read</b>"]
-
-    n = len(candidates)
-    n_strong = len(buckets["STRONG"])
-
-    # Headline — the institutional take on whether today is actionable.
-    if n_strong >= 1:
-        lines.append(
-            f"  {n_strong} high-conviction setup{'s' if n_strong > 1 else ''} "
-            f"({n} names scanned, spread {min(scores)}-{max(scores)})."
-        )
-    elif spread <= 15:
-        lo, hi = min(scores), max(scores)
-        lines.append(
-            f"  No high-conviction setups. Universe scored {lo}-{hi} / 100 (neutral cluster)."
-        )
-    else:
-        lo, hi = min(scores), max(scores)
-        lines.append(
-            f"  No STRONG setups. Universe spread {lo}-{hi} / 100 — some differentiation."
-        )
-
-    # Closest to action: top 2 non-neutral non-avoid.
-    show_precise = spread > 15
-    actionable_top = sorted(
-        buckets["STRONG"] + buckets["WATCH"],
-        key=lambda t: -t[1],
-    )[:2]
-    if actionable_top:
-        lines.append("")
-        lines.append("  <i>Closest to action:</i>")
-        for c, s_pct in actionable_top:
-            score_disp = s_pct if show_precise else _round_to_5(s_pct)
-            trigger = _trigger_for(c)
-            lines.append(
-                f"    {_escape(_short_symbol(c.symbol))} ({score_disp}) — "
-                f"{_escape((c.reason or 'no notable signals')[:120])}."
-            )
-            if trigger:
-                lines.append(f"        Trigger: {_escape(trigger)}")
-
-    # Avoid block: top 1 lowest-score AVOID.
-    avoid_top = sorted(buckets["AVOID"], key=lambda t: t[1])[:1]
-    if avoid_top:
-        lines.append("")
-        lines.append("  <i>Avoid:</i>")
-        for c, s_pct in avoid_top:
-            score_disp = s_pct if show_precise else _round_to_5(s_pct)
-            lines.append(
-                f"    {_escape(_short_symbol(c.symbol))} ({score_disp}) — "
-                f"{_escape((c.reason or 'low conviction')[:100])}."
-            )
-
-    lines.append("")
-    return lines
-
-
-def _short_symbol(sym: str) -> str:
-    return sym.split("-")[0].upper() if sym else "?"
-
-
-def _trigger_for(c) -> str | None:
-    """Concrete actionable trigger string for the candidate.
-
-    Prefers a price level (50d MA proxy via 30d low as floor reclaim)
-    over vague guidance.
-    """
-    px = (c.extras.get("px") or {}) if c.extras else {}
-    last = px.get("last")
-    high30 = px.get("high30")
-    low30 = px.get("low30")
-    if last is None:
-        return None
-    if c.action == "WATCH" and high30 is not None and last < high30 * 0.95:
-        return f"reclaim of {_fmt_price(high30 * 0.97)} (~3% off 30d high)"
-    if c.action == "WATCH" and low30 is not None:
-        return f"hold of {_fmt_price(low30)} (30d low) on a retest"
-    return None
-
-
-def _signals_fired(candidates) -> list[str]:
-    """Cross-symbol signal clusters worth surfacing.
-
-    Only emit lines when something actually fired. A neutral universe
-    correctly produces zero lines here — we then say 'no signals fired'
-    in one line rather than padding."""
-    fired: list[str] = []
-
-    # Bullish/bearish MACD clusters.
-    bear_macd = [c.symbol for c in candidates if _has_macd(c, "bear")]
-    bull_macd = [c.symbol for c in candidates if _has_macd(c, "bull")]
-    if len(bear_macd) >= 2:
-        fired.append(
-            f"{len(bear_macd)} names on bearish MACD: "
-            f"{', '.join(_short_symbol(s) for s in bear_macd[:5])}"
-        )
-    if len(bull_macd) >= 2:
-        fired.append(
-            f"{len(bull_macd)} names on bullish MACD: "
-            f"{', '.join(_short_symbol(s) for s in bull_macd[:5])}"
-        )
-
-    # Names underperforming BTC by a wide margin.
-    weak_vs_btc = []
-    for c in candidates:
-        ca = c.signals.get("cross_asset") if c.signals else None
-        if ca is None:
-            continue
-        rs = (ca.details or {}).get("rel_strength_60d")
-        if rs is not None and rs <= -0.25:
-            weak_vs_btc.append((c.symbol, rs))
-    if len(weak_vs_btc) >= 2:
-        names = ", ".join(_short_symbol(s) for s, _ in weak_vs_btc[:5])
-        fired.append(f"{len(weak_vs_btc)} names underperforming BTC by >25pt over 60d: {names}")
-
-    # Funding extremes (notable).
-    funding_hot = [c.symbol for c in candidates if _funding_extreme(c)]
-    if funding_hot:
-        fired.append(
-            f"{len(funding_hot)} name(s) with funding-rate extreme: "
-            f"{', '.join(_short_symbol(s) for s in funding_hot[:5])}"
-        )
-
-    # OI cluster.
-    oi_hot = [c.symbol for c in candidates if _oi_notable(c)]
-    if oi_hot:
-        fired.append(
-            f"{len(oi_hot)} name(s) with notable OI move: "
-            f"{', '.join(_short_symbol(s) for s in oi_hot[:5])}"
-        )
-
-    if not fired:
-        return [
-            "<b>Signals fired</b>",
-            "  No funding extremes, no liquidation cascades, no notable OI moves.",
-            "",
-        ]
-
-    out = ["<b>Signals fired</b>"]
-    for line in fired:
-        out.append(f"  {line}")
-    out.append("")
-    return out
-
-
-def _has_macd(c, direction: str) -> bool:
-    sig = c.signals.get("technical") if c.signals else None
-    if not sig or not sig.bullets:
-        return False
-    for b in sig.bullets:
-        text = b.lower()
-        if "macd" not in text:
-            continue
-        if direction == "bear" and ("bearish" in text or "rolling over" in text):
-            return True
-        if direction == "bull" and ("bullish" in text or "early trend" in text):
-            return True
-    return False
-
-
-def _funding_extreme(c) -> bool:
-    sig = c.signals.get("funding_rate") if c.signals else None
-    if not sig:
-        return False
-    return abs(sig.strength) >= 0.3
-
-
-def _oi_notable(c) -> bool:
-    sig = c.signals.get("open_interest") if c.signals else None
-    if not sig:
-        return False
-    return abs(sig.strength) >= 0.25
-
-
-def _action_line(result: RunResult, candidates) -> list[str]:
-    """One-liner: what to do, when next."""
-    n_strong = sum(1 for c in candidates if c.action == "STRONG")
-    if n_strong >= 1:
-        msg = f"{n_strong} STRONG name(s) — review entries above. Re-checking at 14:00 UTC."
-    else:
-        msg = "No buys today. Re-checking at 14:00 UTC (passive scan, silent unless trigger)."
-    return ["<b>Action</b>", f"  {msg}", "  Next high-conviction watchlist: tomorrow 08:00 UTC."]
-
-
-def _catalysts_line(engine) -> list[str]:
-    """One-line catalyst summary (suppressed if none)."""
+def _top_story_section(engine) -> list[str]:
+    """\U0001F6A8\U0001F6A8 TOP STORY — single highest |sentiment| 24h article that
+    mentions a universe coin. Skipped if no qualifying article."""
     if engine is None:
         return []
     try:
         from ..news.lookup import top_catalysts
-        catalysts = top_catalysts(engine, hours=24, limit=3, min_magnitude=0.5)
+        catalysts = top_catalysts(engine, hours=24, limit=1, min_magnitude=0.5)
     except Exception:
         return []
     if not catalysts:
         return []
-    out = ["<b>News catalysts (24h, |sentiment|>=0.5)</b>"]
-    for cat in catalysts:
-        currencies = ",".join(cat.currencies_json[:3]) if cat.currencies_json else "-"
-        out.append(
-            f"  {_escape(currencies)} ({cat.sentiment_score:+.2f}): "
-            f"{_escape(cat.title[:120])}"
-        )
-    out.append("")
+    article = catalysts[0]
+    currencies = list(getattr(article, "currencies_json", None) or [])
+    sym = currencies[0] if currencies else ""
+    if not sym:
+        return []
+    out: list[str] = []
+    out.append("\U0001F6A8\U0001F6A8 <b>TOP STORY</b>")
+    name = _coin_full_name(sym)
+    out.append(f"   {_escape(sym)} ({_escape(name)})")
+    out.append(f"   {_escape(article.title)}")
+    sent = float(getattr(article, "sentiment_score", 0.0) or 0.0)
+    why = _why_it_matters(article, sent)
+    if why:
+        out.append(f"   → Why it matters: {_escape(why)}")
     return out
 
 
-def _paper_portfolio_line(engine) -> list[str]:
+def _why_it_matters(article, sentiment: float) -> str:
+    title = getattr(article, "title", "") or ""
+    if sentiment >= 0.5:
+        return "Sentiment skews positive; could re-rate the affected name in the next 1-3 sessions."
+    if sentiment <= -0.5:
+        return "Sentiment skews negative; expect a 1-3 session drag until clarity returns."
+    if "etf" in title.lower():
+        return "ETF flow signals retail bid; watch for follow-through."
+    return "Watch for follow-through in the next 24-48h."
+
+
+def _since_last_check_section(engine) -> list[str]:
+    """\U0001F4F0 SINCE YOUR LAST CHECK — last 24h news bullets, deduped per
+    coin, sentiment-coloured. Up to 8."""
     if engine is None:
         return []
     try:
-        from sqlalchemy import select
+        from datetime import datetime, timedelta
 
-        from ..db import session_factory, session_scope
-        from ..models import PaperCash, PaperPosition
-        SessionLocal = session_factory(engine)
-        with session_scope(SessionLocal) as session:
-            cash_row = session.get(PaperCash, 1)
-            positions = list(session.scalars(select(PaperPosition)).all())
-            cash = float(cash_row.cash_usd) if cash_row else 0.0
-            holdings = [p for p in positions if (p.quantity or 0.0) > 0]
+        from sqlalchemy import desc
+        from sqlalchemy.orm import Session
+
+        from ..models import NewsArticle
+        cutoff = datetime.now(UTC) - timedelta(hours=24)
+        with Session(engine) as session:
+            rows = list(session.query(NewsArticle)
+                        .filter(NewsArticle.published_at >= cutoff)
+                        .order_by(desc(NewsArticle.published_at))
+                        .limit(50)
+                        .all())
+            for r in rows:
+                session.expunge(r)
     except Exception:
         return []
-    if cash == 0 and not holdings:
+    if not rows:
         return []
-    parts = [f"cash ${cash:,.0f}"]
-    for p in holdings:
-        parts.append(f"{_escape(_short_symbol(p.symbol))} {float(p.quantity):.4f}@${float(p.avg_price):,.0f}")
-    return [f"<b>Paper portfolio</b>: {' · '.join(parts)}", ""]
+
+    seen_syms: set[str] = set()
+    bullets: list[str] = []
+    for art in rows:
+        currencies = list(getattr(art, "currencies_json", None) or [])
+        if not currencies:
+            continue
+        sym = currencies[0]
+        if sym in seen_syms:
+            continue
+        seen_syms.add(sym)
+        sent = float(getattr(art, "sentiment_score", 0.0) or 0.0)
+        if sent >= 0.3:
+            dot = "\U0001F7E2"
+        elif sent <= -0.3:
+            dot = "\U0001F534"
+        else:
+            dot = "⚡"
+        title = getattr(art, "title", "")
+        source = getattr(art, "source", "")
+        suffix = f" - {source}" if source else ""
+        bullets.append(f"   {dot} {_escape(sym)}: {_escape(title[:100])}{_escape(suffix)}")
+        if len(bullets) >= 8:
+            break
+    if not bullets:
+        return []
+    out = ["\U0001F4F0 <b>SINCE YOUR LAST CHECK — last 24h</b>"]
+    out.extend(bullets)
+    return out
+
+
+def _ranked_candidates_section(result: RunResult) -> list[str]:
+    """\U0001F4CA RANKED CANDIDATES — every candidate gets a panel."""
+    if not result.candidates:
+        return [
+            "\U0001F4CA <b>RANKED CANDIDATES</b>",
+            "   <i>No candidates today.</i>",
+        ]
+    out: list[str] = ["\U0001F4CA <b>RANKED CANDIDATES</b> (sorted by score)"]
+    for idx, c in enumerate(result.candidates, 1):
+        out.extend(_candidate_panel(idx, c))
+        out.append("")
+    if out and out[-1] == "":
+        out.pop()
+    return out
+
+
+def _candidate_panel(rank: int, c) -> list[str]:
+    """Emit the per-candidate panel."""
+    extras = c.extras or {}
+    decision_dict = extras.get("decision") or {}
+    classification = decision_dict.get("classification", "HIGHER-RISK")
+    decision = decision_dict.get("decision", "WAIT")
+    tag = decision_dict.get("tag", "")
+    why = decision_dict.get("why_text", "")
+    bullets = decision_dict.get("value_bullets", []) or []
+    main_risk = decision_dict.get("main_risk", "")
+    technical_summary = decision_dict.get("technical_summary", "")
+    buy_zone = decision_dict.get("buy_zone")
+    buy_if = decision_dict.get("buy_if_price")
+    max_chase = decision_dict.get("max_chase")
+    sell_half = decision_dict.get("sell_half_price")
+    sell_quarter = decision_dict.get("sell_quarter_price")
+    stop = decision_dict.get("stop_price")
+    target_base = decision_dict.get("target_base")
+    target_bull = decision_dict.get("target_bull")
+    review_days = decision_dict.get("review_in_days", 7)
+    break_thesis = decision_dict.get("break_thesis_if", "")
+    suggested_size = decision_dict.get("suggested_size_usd")
+
+    primary_emoji = _DECISION_PRIMARY_EMOJI.get(decision, "•")
+    label_token = _DECISION_LABEL_TOKEN.get(decision, decision)
+    sym = _short_symbol(c.symbol)
+    score_pct = _to_score_pct(c.score)
+
+    header_parts = [
+        f"{primary_emoji} {rank}. <b>{_escape(sym)}</b>",
+        f"— {_escape(classification)}",
+        f"— {score_pct}/100",
+    ]
+    if tag:
+        tag_emoji = _TAG_EMOJI.get(tag, "")
+        if tag_emoji:
+            header_parts.append(f" · {tag_emoji} {_escape(tag)}")
+        else:
+            header_parts.append(f" · {_escape(tag)}")
+    header_parts.append(f" · [{label_token}]")
+    header = "  ".join(header_parts[:3]) + " " + " ".join(header_parts[3:])
+
+    block: list[str] = [header]
+
+    px = extras.get("px") or {}
+    last = px.get("last")
+
+    # Inline price warning (chase / dip / peak).
+    inline_warn = _inline_price_warning(tag, px)
+    if inline_warn:
+        block.append(f"   {inline_warn}")
+
+    # Buy line for BUY_NOW / STARTER.
+    if decision in ("BUY_NOW", "STARTER") and suggested_size:
+        block.append(f"   Buy: <b>${suggested_size:,.0f}</b> now")
+
+    why_label = {
+        "BUY_NOW": "Why buy",
+        "STARTER": "Why starter",
+        "WAIT": "Why wait",
+        "AVOID": "Why avoid",
+    }.get(decision, "Why")
+    if why:
+        block.append(f"   <b>{why_label}:</b> {_escape(why)}")
+
+    # Value bullets (indented, with check-marks).
+    if bullets and decision != "WAIT":
+        for b in bullets[:3]:
+            block.append(f"     ✅ {_escape(b)}")
+    elif bullets:
+        # WAIT keeps a single supporting bullet.
+        block.append(f"     ✅ {_escape(bullets[0])}")
+
+    # Main risk (BUY_NOW only).
+    if decision == "BUY_NOW" and main_risk:
+        block.append(f"   <b>Main risk:</b> {_escape(main_risk)}")
+
+    # Technical summary (always one line if available).
+    if technical_summary:
+        block.append(f"   \U0001F3E6 {_escape(technical_summary)}")
+
+    # Buy zone instruction.
+    if decision in ("BUY_NOW", "STARTER") and buy_zone:
+        lo, hi = buy_zone
+        block.append(
+            f"   \U0001F3AF Buy on strength around {_fmt_price(lo)}-{_fmt_price(hi)} "
+            f"(don't chase above {_fmt_price(max_chase)})"
+        )
+    elif decision == "WAIT" and buy_if is not None:
+        ma_label = ""
+        block.append(
+            f"   <b>Buy if:</b> drops to {_fmt_price(buy_if)}{ma_label}"
+        )
+        if buy_zone:
+            lo, hi = buy_zone
+            block.append(
+                f"   \U0001F3AF Wait for a dip then buy between {_fmt_price(lo)}-{_fmt_price(hi)}"
+            )
+
+    # Targets / stop visible for everyone with price data.
+    if sell_half is not None and last:
+        pct = (sell_half / last - 1.0) * 100
+        block.append(
+            f"   ✅ Sell half at {_fmt_price(sell_half)} ({pct:+.0f}%)"
+        )
+    if sell_quarter is not None and last:
+        pct = (sell_quarter / last - 1.0) * 100
+        block.append(
+            f"   ✅ Sell another quarter at {_fmt_price(sell_quarter)} ({pct:+.0f}%)"
+        )
+    if stop is not None and last:
+        pct = (stop / last - 1.0) * 100
+        block.append(
+            f"   \U0001F6D1 Sell everything if it drops to {_fmt_price(stop)} ({pct:+.0f}%)"
+        )
+
+    # Entry / Max chase (CORE/MAJOR + BUY/STARTER only).
+    if decision in ("BUY_NOW", "STARTER") and classification in ("CORE", "MAJOR"):
+        if buy_zone:
+            block.append(f"   Entry: ≤ {_fmt_price(buy_zone[1])}")
+        if max_chase is not None:
+            block.append(f"   Max chase: {_fmt_price(max_chase)}")
+    if target_base is not None:
+        target_line = f"   Target: {_fmt_price(target_base)} base"
+        if target_bull is not None:
+            target_line += f" / {_fmt_price(target_bull)} bull"
+        block.append(target_line)
+
+    block.append(f"   Review: {review_days} days")
+    if break_thesis:
+        block.append(f"   Break thesis if: {_escape(break_thesis)}")
+    return block
+
+
+def _inline_price_warning(tag: str, px: dict) -> str:
+    """One-line warning embedded under the header for chase/dip/peak."""
+    if tag == "DIP -10% 5d":
+        p5d = px.get("p5d") or px.get("p7d")
+        if p5d is not None:
+            return f"⚠️ DIP ({p5d * 100:+.0f}% 5d)"
+        return "⚠️ DIP"
+    if tag == "chase trap":
+        p5d = px.get("p5d") or px.get("p7d")
+        if p5d is not None:
+            return f"\U0001F6AB CHASE (+{p5d * 100:.0f}% 5d, at peak)"
+        return "\U0001F6AB CHASE"
+    if tag == "at 60d peak":
+        return "⚠️ at 60d peak"
+    return ""
+
+
+def _best_use_section(result: RunResult) -> list[str]:
+    """\U0001F4B0 BEST USE OF NEXT $X — deploy plan summary."""
+    out: list[str] = ["\U0001F4B0 <b>BEST USE OF NEXT $5,000</b>"]
+    buy_now = []
+    starters = []
+    for c in result.candidates:
+        d = (c.extras or {}).get("decision") or {}
+        if d.get("decision") == "BUY_NOW":
+            buy_now.append((c, d))
+        elif d.get("decision") == "STARTER":
+            starters.append((c, d))
+
+    deploy_lines: list[str] = []
+    deploy_total = 0.0
+    for c, d in buy_now:
+        size = d.get("suggested_size_usd") or 0
+        if not size:
+            continue
+        zone = d.get("buy_zone")
+        cap = ""
+        if zone:
+            cap = f" at ≤ {_fmt_price(zone[1])}"
+        deploy_lines.append(
+            f"   Deploy ${size:,.0f} into {_short_symbol(c.symbol)}{cap}"
+            f" (BUY NOW conviction)"
+        )
+        deploy_total += size
+    for c, d in starters:
+        size = d.get("suggested_size_usd") or 0
+        if not size:
+            continue
+        deploy_lines.append(
+            f"   Deploy ${size:,.0f} into {_short_symbol(c.symbol)} (STARTER)"
+        )
+        deploy_total += size
+
+    if deploy_lines:
+        out.extend(deploy_lines)
+        remaining = max(0.0, 5000.0 - deploy_total)
+        if remaining:
+            out.append(
+                f"   Hold ${remaining:,.0f} in cash (regime not supportive of full deployment)"
+            )
+    else:
+        out.append("   Hold $5,000 in cash (no high-conviction setups today)")
+
+    hidden = max(0, len(result.candidates) - 10)
+    if hidden:
+        out.append("")
+        out.append(
+            f"   Hidden from phone: {hidden} more candidates - "
+            "see attached briefing for detail"
+        )
+    return out
+
+
+def _footer_section() -> list[str]:
+    return ["<i>Automated research - not advice. No trades placed.</i>"]
 
 
 # ---------------------------------------------------------------------------
@@ -517,20 +638,22 @@ def _paper_portfolio_line(engine) -> list[str]:
 
 
 def render_html(result: RunResult, *, engine=None) -> str:
-    """Institutional one-pager. Brevity is the point."""
-    lines: list[str] = []
-    date_str = result.run_at.strftime("%Y-%m-%d")
-    lines.append(f"<b>Crypto Daily — {date_str}</b>")
-    lines.append("")
+    """Multi-section daily render. Sections separated by ``\\n\\n``."""
+    sections: list[list[str]] = []
+    sections.append(_header_section(result))
+    sections.append(_paper_portfolio_section(result, engine))
+    top_story = _top_story_section(engine)
+    if top_story:
+        sections.append(top_story)
+    since_last = _since_last_check_section(engine)
+    if since_last:
+        sections.append(since_last)
+    sections.append(_ranked_candidates_section(result))
+    sections.append(_best_use_section(result))
+    sections.append(_footer_section())
 
-    lines.extend(_paper_portfolio_line(engine))
-    lines.extend(_market_regime_lines(result.market))
-    lines.extend(_todays_read(result.candidates))
-    lines.extend(_signals_fired(result.candidates))
-    lines.extend(_catalysts_line(engine))
-    lines.extend(_action_line(result, result.candidates))
-
-    return "\n".join(lines)
+    blocks = ["\n".join(s) for s in sections if s]
+    return "\n\n".join(blocks)
 
 
 # Backward-compat alias for tests that imported the underscore name.
@@ -538,7 +661,7 @@ _render_html = render_html
 
 
 # ---------------------------------------------------------------------------
-# should_send gate
+# should_send gate (legacy)
 # ---------------------------------------------------------------------------
 
 
@@ -551,16 +674,14 @@ def should_send_daily(
 ) -> tuple[bool, str]:
     """Suppress daily messages that would just repeat yesterday.
 
+    DEPRECATED: the daily watchlist is the digest now and always sends.
+    Retained so legacy tests + any external callers keep working.
+
     Send when ANY of:
       * We have no prior daily snapshot (first run).
       * Top-3 candidate symbols changed.
       * Any top-5 candidate's score moved by more than score_tolerance.
       * Any symbol crossed a bucket boundary (NEUTRAL <-> WATCH <-> STRONG).
-      * A high-impact news catalyst appeared in the last
-        catalyst_window_hours hours that wasn't in yesterday's window.
-
-    Returns (should_send, reason). The caller logs the reason and skips
-    the Telegram POST when should_send is False.
     """
     if engine is None:
         return True, "no engine to compare against"
@@ -575,7 +696,6 @@ def should_send_daily(
 
         SessionLocal = session_factory(engine)
 
-        # Today's top candidates (the freshly computed run).
         today_top3 = [c.symbol for c in candidates[:3]]
         today_scores = {c.symbol: float(c.score) for c in candidates[:5]}
         today_buckets = {
@@ -583,8 +703,6 @@ def should_send_daily(
             for c in candidates[:10]
         }
 
-        # Yesterday's snapshot — most recent CandidateRecord run before
-        # today's run.
         cutoff = datetime.now(UTC) - timedelta(hours=2)
         with session_scope(SessionLocal) as session:
             prior_run_at = session.scalars(
@@ -632,13 +750,41 @@ def should_send_daily(
 
 
 # ---------------------------------------------------------------------------
-# Chunking + http
+# Multi-part chunking
 # ---------------------------------------------------------------------------
 
 
-def _chunk(text: str, *, limit: int) -> list[str]:
+def _chunk_sections(text: str, *, limit: int) -> list[str]:
+    """Chunk on section boundaries (blank lines) when total > limit."""
     if len(text) <= limit:
         return [text]
+    sections = text.split("\n\n")
+    out: list[str] = []
+    cur: list[str] = []
+    cur_len = 0
+    for sec in sections:
+        sec_len = len(sec) + (2 if cur else 0)
+        if cur_len + sec_len > limit and cur:
+            out.append("\n\n".join(cur))
+            cur = [sec]
+            cur_len = len(sec)
+            continue
+        if len(sec) > limit:
+            # Single section too big; fall back to line-chunking it.
+            if cur:
+                out.append("\n\n".join(cur))
+                cur = []
+                cur_len = 0
+            out.extend(_chunk_lines(sec, limit=limit))
+            continue
+        cur.append(sec)
+        cur_len += sec_len
+    if cur:
+        out.append("\n\n".join(cur))
+    return out
+
+
+def _chunk_lines(text: str, *, limit: int) -> list[str]:
     out: list[str] = []
     cur: list[str] = []
     cur_len = 0
@@ -653,6 +799,10 @@ def _chunk(text: str, *, limit: int) -> list[str]:
     if cur:
         out.append("".join(cur))
     return out
+
+
+# Legacy alias kept for any external imports.
+_chunk = _chunk_sections
 
 
 def _make_httpx():
