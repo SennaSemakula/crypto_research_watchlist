@@ -52,7 +52,7 @@ jobs:
           DATABASE_URL: sqlite:///crypto_research_watchlist.db
           PAPER_TRADING: '1'
         run: |
-          python -m crypto_research_watchlist learning-summary --send-telegram
+          python -m crypto_research_watchlist learning-summary
 
       - name: Commit markdown report
         run: |

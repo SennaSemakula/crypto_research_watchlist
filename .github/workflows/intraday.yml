@@ -48,7 +48,7 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           DATABASE_URL: sqlite:///crypto_research_watchlist.db
           PAPER_TRADING: '1'
-        run: python -m crypto_research_watchlist intraday --send-telegram
+        run: python -m crypto_research_watchlist intraday
 
       - name: Persist DB across runs (commit)
         run: |
