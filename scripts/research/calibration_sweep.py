@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 # Dev fallback: prefer repo-local .venv when invoked outside it.
@@ -118,7 +118,7 @@ def run_sweep(
         )
 
     out = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         "n_grid_points": len(results),
         "best": best,
         "results": results,
