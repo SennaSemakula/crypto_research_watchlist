@@ -524,7 +524,12 @@ delivers more for less.
 
 Source: [CryptoQuant pricing](https://cryptoquant.com/pricing).
 
-### 1.13 CryptoPanic
+### 1.13 CryptoPanic — DISCONTINUED
+
+**Status (2026-04-01).** CryptoPanic discontinued its free Developer
+tier. The replacement in this codebase is CryptoCompare News (see
+docs/SOURCES_EXPANSION.md §1). The notes below are kept for historical
+reference; do not wire new integrations against CryptoPanic.
 
 **What.** Aggregated crypto news with vote-based sentiment ("bullish"/
 "bearish"/"important" votes from the platform's user base).
@@ -863,10 +868,11 @@ exact endpoint / call.
     `signals/cross_asset.py`; a separate API call is unnecessary.
 
 ### News + sentiment
-- Headlines: `CryptoPanic` free Developer plan. Call:
-  `GET https://cryptopanic.com/api/v1/posts/?auth_token={key}&currencies=BTC,ETH,SOL,...&filter=hot`.
-- Backup: CoinDesk + Cointelegraph RSS via `feedparser`.
-- Sentiment numeric: deferred. Vote counts are too noisy to trust.
+- Headlines: `CryptoCompare News` free tier
+  (`min-api.cryptocompare.com/data/v2/news/`). Replaces CryptoPanic
+  since 2026-04-01 (free Developer tier discontinued).
+- Backup: CoinDesk + Cointelegraph RSS via `feedparser`, Reddit JSON.
+- Sentiment numeric: NLTK VADER lexicon scoring per article.
 
 ### Macro
 - `FRED` (already used by stock sibling). Series: `DTWEXBGS` (USD
