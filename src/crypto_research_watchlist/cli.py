@@ -411,12 +411,18 @@ def cli_intraday(
                 current_action=c.action,
             ))
 
-    # Detect high-impact news in the lookback window.
-    news_hits: list[NewsHit] = _recent_high_impact_news(
-        engine,
-        lookback_minutes=news_lookback_minutes,
-        min_magnitude=0.5,
-    )
+    # News no longer triggers an alert on its own. Score deltas already
+    # aggregate news + price + on-chain into the composite. We surface
+    # high-impact news in the alert body ONLY when a score-delta or
+    # action-flip already justifies the alert. Threshold raised from 0.5
+    # to 0.85 so context lines stay genuinely material.
+    news_hits: list[NewsHit] = []
+    if score_moves:
+        news_hits = _recent_high_impact_news(
+            engine,
+            lookback_minutes=news_lookback_minutes,
+            min_magnitude=0.85,
+        )
 
     alert = IntradayAlert(
         score_moves=score_moves,
@@ -426,11 +432,11 @@ def cli_intraday(
 
     telegram_status = "disabled"
     if send_telegram:
-        if alert.has_signal():
+        if score_moves:
             ok = send_intraday_telegram(alert)
             telegram_status = "sent" if ok else "skipped"
         else:
-            logger.info("intraday: no material change")
+            logger.info("intraday: no score delta or action flip; suppressing")
             telegram_status = "skipped"
 
     typer.echo(

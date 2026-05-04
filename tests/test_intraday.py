@@ -300,8 +300,13 @@ def test_intraday_action_change_triggers_alert(tmp_path, monkeypatch, runner):
     assert captured[0].score_moves
 
 
-def test_intraday_high_impact_news_triggers_alert(tmp_path, monkeypatch, runner):
-    """An article with |sentiment| ≥ 0.5 in last hour triggers alert."""
+def test_intraday_high_impact_news_alone_does_not_trigger(tmp_path, monkeypatch, runner):
+    """News alone never fires an alert; score deltas are the trigger.
+
+    This is intentional: crypto news is dramatic and frequent, so news-only
+    triggering produced ~10 alerts/hour. Material news will register as a
+    score delta on the next pipeline run anyway.
+    """
     db = tmp_path / "intraday.db"
     db_url = f"sqlite:///{db}"
     _set_env(monkeypatch, db_url)
@@ -314,8 +319,6 @@ def test_intraday_high_impact_news_triggers_alert(tmp_path, monkeypatch, runner)
     cfg = load_app_config()
     from crypto_research_watchlist.pipeline import run_once
     pre = run_once(cfg=cfg, engine=engine, write_report=False)
-    # Reseed prior with same scores AND same actions so neither score nor
-    # action triggers.
     from crypto_research_watchlist.db import session_factory, session_scope
     from crypto_research_watchlist.models import CandidateRecord
     SessionLocal = session_factory(engine)
@@ -324,9 +327,9 @@ def test_intraday_high_impact_news_triggers_alert(tmp_path, monkeypatch, runner)
     for c in pre.candidates:
         _seed_prior_candidate(engine, c.symbol, score=c.score, action=c.action)
 
-    # Seed a high-impact article.
+    # Seed a high-impact article. Under the OLD logic this would have fired.
     _seed_news(engine, title="ETF approval ignites rally",
-               sentiment=0.85, currencies=["BTC"], minutes_ago=10)
+               sentiment=0.95, currencies=["BTC"], minutes_ago=10)
 
     captured: list[object] = []
     import crypto_research_watchlist.notifiers.intraday_notifier as nm
@@ -335,10 +338,8 @@ def test_intraday_high_impact_news_triggers_alert(tmp_path, monkeypatch, runner)
 
     res = runner.invoke(app, ["intraday", "--send-telegram"])
     assert res.exit_code == 0, res.output
-    assert "1 new high-impact" in res.output or "1 new high-impact articles" in res.output
-    assert "telegram=sent" in res.output
-    assert captured
-    assert captured[0].news_hits
+    assert "telegram=skipped" in res.output
+    assert not captured
 
 
 def test_intraday_quiet_when_no_change(tmp_path, monkeypatch, runner):
