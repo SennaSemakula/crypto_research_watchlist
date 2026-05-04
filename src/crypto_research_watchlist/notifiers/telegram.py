@@ -1,4 +1,4 @@
-"""Telegram bot notifier — daily crypto rotation render.
+"""Telegram bot notifier - daily crypto rotation render.
 
 Mirrors the stock side's "Daily Capital Rotation" template:
 
@@ -6,9 +6,9 @@ Mirrors the stock side's "Daily Capital Rotation" template:
   * Paper portfolio block (cash + positions + PnL + benchmark deltas).
   * Top story banner (single highest |sentiment| 24h headline).
   * Since-your-last-check (24h news bullets, one per coin).
-  * Ranked candidates — every candidate gets a panel matching its
+  * Ranked candidates - every candidate gets a panel matching its
     decision (BUY_NOW / STARTER / WAIT / AVOID).
-  * Best use of next $X — capital allocation suggestion.
+  * Best use of next $X - capital allocation suggestion.
   * Footer.
 
 The CandidateDecision attached to each Candidate.extras carries the
@@ -220,7 +220,7 @@ def _coin_full_name(symbol: str) -> str:
 def _header_section(result: RunResult) -> list[str]:
     date_str = result.run_at.strftime("%Y-%m-%d")
     return [
-        f"\U0001F4CA <b>Daily Crypto Rotation — {_escape(date_str)}</b>",
+        f"\U0001F4CA <b>Daily Crypto Rotation - {_escape(date_str)}</b>",
     ]
 
 
@@ -310,7 +310,7 @@ def _benchmark_parts(result: RunResult) -> str:
 
 
 def _top_story_section(engine) -> list[str]:
-    """\U0001F6A8\U0001F6A8 TOP STORY — single highest |sentiment| 24h article that
+    """\U0001F6A8\U0001F6A8 TOP STORY - single highest |sentiment| 24h article that
     mentions a universe coin. Skipped if no qualifying article."""
     if engine is None:
         return []
@@ -350,7 +350,7 @@ def _why_it_matters(article, sentiment: float) -> str:
 
 
 def _since_last_check_section(engine) -> list[str]:
-    """\U0001F4F0 SINCE YOUR LAST CHECK — last 24h news bullets, deduped per
+    """\U0001F4F0 SINCE YOUR LAST CHECK - last 24h news bullets, deduped per
     coin, sentiment-coloured. Up to 8."""
     if engine is None:
         return []
@@ -400,13 +400,13 @@ def _since_last_check_section(engine) -> list[str]:
             break
     if not bullets:
         return []
-    out = ["\U0001F4F0 <b>SINCE YOUR LAST CHECK — last 24h</b>"]
+    out = ["\U0001F4F0 <b>SINCE YOUR LAST CHECK - last 24h</b>"]
     out.extend(bullets)
     return out
 
 
 def _ranked_candidates_section(result: RunResult) -> list[str]:
-    """\U0001F4CA RANKED CANDIDATES — every candidate gets a panel."""
+    """\U0001F4CA RANKED CANDIDATES - every candidate gets a panel."""
     if not result.candidates:
         return [
             "\U0001F4CA <b>RANKED CANDIDATES</b>",
@@ -449,19 +449,19 @@ def _candidate_panel(rank: int, c) -> list[str]:
     sym = _short_symbol(c.symbol)
     score_pct = _to_score_pct(c.score)
 
-    header_parts = [
-        f"{primary_emoji} {rank}. <b>{_escape(sym)}</b>",
-        f"— {_escape(classification)}",
-        f"— {score_pct}/100",
-    ]
+    head = (
+        f"{primary_emoji} {rank}. <b>{_escape(sym)}</b> "
+        f"- {_escape(classification)} - {score_pct}/100"
+    )
+    suffix_parts: list[str] = []
     if tag:
         tag_emoji = _TAG_EMOJI.get(tag, "")
         if tag_emoji:
-            header_parts.append(f" · {tag_emoji} {_escape(tag)}")
+            suffix_parts.append(f"{tag_emoji} {_escape(tag)}")
         else:
-            header_parts.append(f" · {_escape(tag)}")
-    header_parts.append(f" · [{label_token}]")
-    header = "  ".join(header_parts[:3]) + " " + " ".join(header_parts[3:])
+            suffix_parts.append(_escape(tag))
+    suffix_parts.append(f"[{label_token}]")
+    header = head + "  · " + "  · ".join(suffix_parts)
 
     block: list[str] = [header]
 
@@ -573,7 +573,7 @@ def _inline_price_warning(tag: str, px: dict) -> str:
 
 
 def _best_use_section(result: RunResult) -> list[str]:
-    """\U0001F4B0 BEST USE OF NEXT $X — deploy plan summary."""
+    """\U0001F4B0 BEST USE OF NEXT $X - deploy plan summary."""
     out: list[str] = ["\U0001F4B0 <b>BEST USE OF NEXT $5,000</b>"]
     buy_now = []
     starters = []

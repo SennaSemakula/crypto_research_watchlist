@@ -6,7 +6,7 @@ The render mirrors the stock side's "Daily Capital Rotation" template:
   * MY PAPER PORTFOLIO block
   * (optional) TOP STORY banner
   * (optional) SINCE YOUR LAST CHECK 24h news bullets
-  * RANKED CANDIDATES — every candidate gets a panel
+  * RANKED CANDIDATES - every candidate gets a panel
   * BEST USE OF NEXT $X capital allocation
   * Footer
 
