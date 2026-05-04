@@ -22,6 +22,7 @@ from .candidates import Candidate, build_candidate, rank_candidates
 from .config import AppConfig
 from .data.coingecko_provider import CoinGeckoProvider, MarketSummary
 from .db import session_factory, session_scope
+from .decisions import attach_decisions
 from .models import CandidateRecord, SignalRecord
 from .signals import SignalContext, evaluate_all
 from .universe import UniverseEntry, build_universe, filter_universe
@@ -94,6 +95,8 @@ def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
     out: dict = {"last": last}
     if len(closes) >= 2:
         out["p1d"] = float(last / closes[-2] - 1.0)
+    if len(closes) >= 6:
+        out["p5d"] = float(last / closes[-6] - 1.0)
     if len(closes) >= 8:
         out["p7d"] = float(last / closes[-8] - 1.0)
     if len(closes) >= 31:
@@ -102,6 +105,10 @@ def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
         recent = df.tail(30)
         out["high30"] = float(recent["high"].astype(float).max())
         out["low30"] = float(recent["low"].astype(float).min())
+    if len(df) >= 60 and {"high", "low"}.issubset(df.columns):
+        recent = df.tail(60)
+        out["high60"] = float(recent["high"].astype(float).max())
+        out["low60"] = float(recent["low"].astype(float).min())
     if len(df) >= 15 and {"high", "low", "close"}.issubset(df.columns):
         recent = df.tail(15)
         h = recent["high"].astype(float).to_numpy()
@@ -209,9 +216,31 @@ def run_once(
         px = _price_extras(price_df)
         if px:
             c.extras["px"] = px
+        if oi_today is not None:
+            c.extras["oi_today"] = oi_today
+        if oi_7d is not None:
+            c.extras["oi_7d_ago"] = oi_7d
         candidates.append(c)
 
     ranked = rank_candidates(candidates)
+
+    # Per-symbol 24h news for the decision engine (graceful no-op when
+    # the engine is unavailable or the lookup raises).
+    news_by_symbol: dict[str, list] = {}
+    if engine is not None:
+        try:
+            from .news.lookup import recent_articles_for
+            for c in ranked:
+                articles = recent_articles_for(engine, c.symbol, hours=24, limit=5)
+                if articles:
+                    news_by_symbol[c.symbol.split("-")[0].upper()] = articles
+        except Exception as exc:
+            logger.warning("news lookup for decisions failed: %s", exc)
+
+    try:
+        attach_decisions(ranked, news_by_symbol=news_by_symbol)
+    except Exception as exc:
+        logger.warning("attach_decisions failed: %s", exc)
 
     # Market summary is fail-safe: absent key, network error, or loader
     # exception all collapse to None. The renderer treats None as "skip
