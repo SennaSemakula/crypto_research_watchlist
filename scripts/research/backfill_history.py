@@ -1,19 +1,27 @@
-"""Backfill 5y of daily OHLCV for the crypto majors + benchmarks + macro.
+"""Backfill OHLCV history for the crypto majors + benchmarks + macro.
+
+Two modes:
+
+  * Default (5y full backfill) — first-time setup or quality refresh:
+        python scripts/research/backfill_history.py
+
+  * Incremental (last 7 days) — daily refresh, designed to stay under
+    60s so the GitHub Actions backfill workflow can run before daily.yml:
+        python scripts/research/backfill_history.py --incremental
 
 Output (committed so autonomous agents can read it):
   data/historical/prices_daily.parquet     OHLCV daily bars
   data/historical/symbols.json             Universe + benchmark + macro symbol map
   data/historical/quality.json             Per-symbol gap/jump flags
 
-Run:
-  source .venv/bin/activate
-  python scripts/research/backfill_history.py
-
-Idempotent. Re-running refreshes everything.
+Idempotent. Re-running refreshes everything (full mode) or merges last
+7 days into the existing parquet (incremental mode), de-duplicating
+on (symbol, date).
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -40,6 +48,7 @@ OUT_DIR = ROOT / "data" / "historical"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 YEARS_BACK = 5
+INCREMENTAL_DAYS = 7
 
 # Benchmarks. BTC is the crypto-native benchmark (also in universe). SPY for cross-asset.
 BENCHMARKS = ["SPY"]
@@ -119,8 +128,89 @@ def detect_quality(symbol: str, df: pd.DataFrame) -> QualityFlag:
     )
 
 
-def main() -> int:
+def merge_incremental(existing: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
+    """Merge new rows into existing parquet, dedup on (symbol, date), keep last.
+
+    The "last" rule lets re-fetched recent days correct previously-missing
+    bars (e.g. yfinance was rate-limited yesterday but returned data today).
+    """
+    if existing.empty:
+        return new.copy()
+    if new.empty:
+        return existing.copy()
+    merged = pd.concat([existing, new], ignore_index=True)
+    merged["date"] = pd.to_datetime(merged["date"])
+    # Keep the most-recently-fetched row per (symbol, date) — i.e. the new one.
+    merged = merged.drop_duplicates(subset=["symbol", "date"], keep="last")
+    return merged.sort_values(["symbol", "date"]).reset_index(drop=True)
+
+
+def run_incremental(universe: list[str]) -> int:
+    """Pull last INCREMENTAL_DAYS, merge into existing parquet. <60s."""
+    prices_path = OUT_DIR / "prices_daily.parquet"
+    if not prices_path.exists():
+        print(
+            "FATAL: no existing parquet to merge into; run a full backfill first",
+            file=sys.stderr,
+        )
+        return 1
+
+    existing = pd.read_parquet(prices_path)
+    existing["date"] = pd.to_datetime(existing["date"])
+
+    # Fetch a slightly wider window (INCREMENTAL_DAYS + 2) to handle TZ
+    # boundary jitter and yfinance's exclusive end_date.
+    end = datetime.now(timezone.utc).date() + timedelta(days=1)
+    start = end - timedelta(days=INCREMENTAL_DAYS + 2)
+
+    all_symbols = sorted(set(universe + BENCHMARKS + MACRO))
+    print(f"Incremental backfill: {len(all_symbols)} symbols, {start} -> {end}")
+
+    new_frames: list[pd.DataFrame] = []
+    for i, sym in enumerate(all_symbols, 1):
+        print(f"[{i:>2}/{len(all_symbols)}] {sym}", flush=True)
+        df = fetch_one(sym, str(start), str(end))
+        if not df.empty:
+            new_frames.append(df)
+        # Tighter sleep — incremental needs to stay under 60s.
+        time.sleep(0.15)
+
+    if not new_frames:
+        print("incremental: no new data fetched; existing parquet unchanged")
+        return 0
+
+    new = pd.concat(new_frames, ignore_index=True)
+    keep_cols = ["date", "symbol", "open", "high", "low", "close", "volume"]
+    new = new[[c for c in keep_cols if c in new.columns]]
+    new["date"] = pd.to_datetime(new["date"])
+
+    merged = merge_incremental(existing, new)
+    added = len(merged) - len(existing)
+
+    merged.to_parquet(prices_path, index=False, compression="zstd")
+    latest = merged["date"].max()
+    print(
+        f"\nWrote {prices_path}: {len(merged):,} rows total "
+        f"(+{added} new), latest date {latest.date()}, "
+        f"{prices_path.stat().st_size / 1e6:.2f} MB"
+    )
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--incremental",
+        action="store_true",
+        help=f"Refresh only the last {INCREMENTAL_DAYS} days and merge into the "
+             "existing parquet. Designed to run in <60s for daily cron.",
+    )
+    args = parser.parse_args(argv)
+
     universe = load_universe()
+    if args.incremental:
+        return run_incremental(universe)
+
     all_symbols = sorted(set(universe + BENCHMARKS + MACRO))
 
     end = datetime.now(timezone.utc).date()
