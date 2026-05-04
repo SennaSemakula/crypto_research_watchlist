@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from statistics import median
 
-from . import SignalContext, SignalResult, label_from_strength
+from . import LABEL_NO_DATA, SignalContext, SignalResult, label_from_strength
 
 # Per-8h thresholds. 24h horizon = 3 funding prints.
 BULL_THRESHOLD = -0.0003   # -0.03% per 8h
@@ -25,15 +25,24 @@ def evaluate(ctx: SignalContext) -> SignalResult:
     history = ctx.funding_rate_history
     latest = ctx.funding_rate
 
-    # Missing data: neutral.
+    # Missing data: NO_DATA so the renderer says "funding unavailable" rather
+    # than implying we measured neutral funding.
     if not history and latest is None:
-        return SignalResult(source="funding_rate", details={"reason": "no funding data"})
+        return SignalResult(
+            source="funding_rate",
+            label=LABEL_NO_DATA,
+            details={"reason": "no funding data (provider returned None)"},
+        )
 
     # If we only have the most recent print, use it as a single sample.
     samples = list(history) if history else [latest]  # type: ignore[list-item]
     samples = [float(s) for s in samples if s is not None]
     if not samples:
-        return SignalResult(source="funding_rate", details={"reason": "no usable samples"})
+        return SignalResult(
+            source="funding_rate",
+            label=LABEL_NO_DATA,
+            details={"reason": "no usable funding samples"},
+        )
 
     med = median(samples)
     most_recent = samples[-1]

@@ -11,14 +11,22 @@ that fills these fields (Blockchair / Etherscan) is stubbed in v1.
 
 from __future__ import annotations
 
-from . import SignalContext, SignalResult, label_from_strength
+from . import LABEL_NO_DATA, SignalContext, SignalResult, label_from_strength
 
 
 def evaluate(ctx: SignalContext) -> SignalResult:
     z = ctx.active_addresses_z
     netflow = ctx.exchange_netflow_usd_7d
     if z is None and netflow is None:
-        return SignalResult(source="onchain", details={"reason": "no on-chain data"})
+        # Distinguish "data unavailable" from "neutral signal". The
+        # renderer surfaces this differently so the daily message reads
+        # "on-chain data unavailable for SOL" rather than implying we
+        # measured neutral on-chain activity.
+        return SignalResult(
+            source="onchain",
+            label=LABEL_NO_DATA,
+            details={"reason": "no on-chain data"},
+        )
 
     bullets: list[str] = []
     components: list[float] = []

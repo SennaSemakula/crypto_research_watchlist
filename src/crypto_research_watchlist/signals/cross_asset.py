@@ -55,6 +55,17 @@ def evaluate(ctx: SignalContext) -> SignalResult:
 
     is_btc = ctx.symbol.upper().startswith("BTC")
 
+    # When BTC itself is barely moving, the alt vs BTC gap should still
+    # surface mild differentiation. Add the BTC dominance overlay for non-
+    # BTC names too: if the cross-pair (own / btc) ratio shifted notably
+    # over 30d we record it.
+    if not is_btc and len(own) >= 31 and len(btc) >= 31:
+        own_30 = float(own.iloc[-1] / own.iloc[-31] - 1.0)
+        btc_30 = float(btc.iloc[-1] / btc.iloc[-31] - 1.0)
+        details["ret_30d"] = round(own_30, 4)
+        details["btc_ret_30d"] = round(btc_30, 4)
+        details["rel_strength_30d"] = round(own_30 - btc_30, 4)
+
     if is_btc:
         # For BTC itself, use ETH/BTC ratio direction as a "BTC dominance"
         # proxy. Rising ETH/BTC = alt season, mildly bearish for BTC's
@@ -66,11 +77,17 @@ def evaluate(ctx: SignalContext) -> SignalResult:
         ratio_30d_change = float(ratio.iloc[-1] / ratio.iloc[-31] - 1.0) if len(ratio) >= 31 else 0.0
         details["eth_btc_ratio_change_30d"] = round(ratio_30d_change, 4)
         if ratio_30d_change >= 0.10:
+            strength = -0.5
+            bullets.append(f"ETH/BTC up {ratio_30d_change * 100:.0f}% in 30d: alt season, BTC rotation drag")
+        elif ratio_30d_change >= 0.05:
             strength = -0.3
-            bullets.append("ETH/BTC up 10%+ in 30d: alt season, BTC rotation drag")
+            bullets.append(f"ETH/BTC up {ratio_30d_change * 100:.0f}% in 30d: alts firming vs BTC")
         elif ratio_30d_change <= -0.10:
+            strength = 0.5
+            bullets.append(f"ETH/BTC down {-ratio_30d_change * 100:.0f}% in 30d: BTC season, BTC rotation favoured")
+        elif ratio_30d_change <= -0.05:
             strength = 0.3
-            bullets.append("ETH/BTC down 10%+ in 30d: BTC season, BTC rotation favoured")
+            bullets.append(f"ETH/BTC down {-ratio_30d_change * 100:.0f}% in 30d: BTC firming vs alts")
     else:
         # Alt: relative strength vs BTC
         if rs >= 0.20:

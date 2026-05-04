@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import SignalContext, SignalResult, label_from_strength
+from . import LABEL_NO_DATA, SignalContext, SignalResult, label_from_strength
 
 # Thresholds.
 OI_DELTA_NOTABLE = 0.10   # 10% OI move over 7d is notable
@@ -40,12 +40,20 @@ def evaluate(ctx: SignalContext) -> SignalResult:
     oi_today = ctx.open_interest_today
     oi_7d = ctx.open_interest_7d_ago
     if oi_today is None or oi_7d is None or oi_7d == 0:
-        return SignalResult(source="open_interest", details={"reason": "missing OI data"})
+        return SignalResult(
+            source="open_interest",
+            label=LABEL_NO_DATA,
+            details={"reason": "missing OI data (provider returned None)"},
+        )
 
     oi_delta = (oi_today - oi_7d) / oi_7d
     price_delta = _close_pct_change_7d(ctx.price_df)
     if price_delta is None:
-        return SignalResult(source="open_interest", details={"reason": "missing price data"})
+        return SignalResult(
+            source="open_interest",
+            label=LABEL_NO_DATA,
+            details={"reason": "insufficient price history for 7d delta"},
+        )
 
     bullets: list[str] = []
     strength = 0.0

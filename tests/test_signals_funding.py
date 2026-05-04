@@ -6,10 +6,12 @@ from crypto_research_watchlist.signals import SignalContext
 from crypto_research_watchlist.signals.funding_rate import evaluate
 
 
-def test_neutral_when_no_data():
+def test_no_data_label_when_provider_returned_nothing():
+    # Distinguish "no data" from "neutral signal" — see signals.LABEL_NO_DATA.
     out = evaluate(SignalContext(symbol="BTC-USD"))
-    assert out.label == "NEUTRAL"
+    assert out.label == "NO_DATA"
     assert out.strength == 0.0
+    assert "no funding data" in (out.details or {}).get("reason", "")
 
 
 def test_extreme_positive_funding_is_bearish():

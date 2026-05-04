@@ -133,6 +133,13 @@ def evaluate(ctx: SignalContext) -> SignalResult:
         elif macd_line < signal_line and macd_line < 0:
             bullets.append("MACD below signal and negative: bearish momentum")
             components.append(-0.3)
+        elif macd_line > signal_line:
+            # Crossing up but still below zero — early-trend signal.
+            bullets.append("MACD crossing up below zero: early trend")
+            components.append(0.15)
+        elif macd_line < signal_line:
+            bullets.append("MACD crossing down above zero: trend rolling over")
+            components.append(-0.15)
 
     cx = ema_cross(close)
     if cx == "golden":

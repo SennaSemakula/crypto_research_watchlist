@@ -82,6 +82,14 @@ def label_from_strength(s: float) -> str:
     return "NEUTRAL"
 
 
+# Sentinel labels distinguishing "we have data, signal is flat" from
+# "the data source did not return anything we could read". The renderer
+# uses NO_DATA to surface "data unavailable" rather than printing a
+# misleading 0.00 strength.
+LABEL_NO_DATA = "NO_DATA"
+LABEL_ERROR = "ERROR"
+
+
 def evaluate_all(ctx: SignalContext) -> dict[str, SignalResult]:
     """Run every registered evaluator. Each is wrapped in try/except so one
     failure cannot poison the whole dict."""

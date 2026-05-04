@@ -514,6 +514,30 @@ def cli_news_refresh() -> None:
     )
 
 
+@app.command("diagnose")
+def cli_diagnose(
+    symbols: str = typer.Option(
+        "",
+        "--symbols",
+        help="Comma-separated symbols to diagnose (default: full universe).",
+    ),
+) -> None:
+    """Per-signal explanation: why each evaluator returned the strength it did.
+
+    Wires the SAME providers as the daily run so the output reflects what
+    the live pipeline actually saw. Reports parquet freshness up front so
+    stale-data bugs are obvious. Use this when "all signals NEUTRAL" looks
+    suspicious in the daily report.
+    """
+    _setup_logging()
+    cfg = load_app_config()
+    env = EnvSettings.from_env()
+
+    from .diagnose import run_diagnose
+    text = run_diagnose(cfg=cfg, env=env, symbols=symbols or None)
+    typer.echo(text)
+
+
 def main() -> None:
     app()
 
