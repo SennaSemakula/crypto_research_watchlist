@@ -26,10 +26,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -152,7 +151,7 @@ class CoinGeckoProvider:
         self._inproc[key] = _CacheEntry(payload=payload, expires_at=time.time() + self._inproc_ttl)
 
     def _disk_path_global(self) -> Path:
-        date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+        date_str = datetime.now(UTC).strftime("%Y%m%d")
         return self._cache_dir / f"global_{date_str}.json"
 
     def _load_disk_global(self) -> dict | None:
@@ -273,7 +272,7 @@ def _parse_global(payload: dict | None) -> MarketSummary | None:
             btc_dominance_pct=_safe_float(mcap_pct.get("btc")),
             eth_dominance_pct=_safe_float(mcap_pct.get("eth")),
             total_volume_24h_usd=_safe_float(total_volume.get("usd")),
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
         )
     except Exception as exc:
         logger.warning("CoinGecko /global parse failed: %s", exc)

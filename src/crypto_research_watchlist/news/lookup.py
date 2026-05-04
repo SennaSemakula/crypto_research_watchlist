@@ -9,7 +9,7 @@ articles across the universe in the time window.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
@@ -22,7 +22,7 @@ def _ticker_from_symbol(symbol: str) -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def recent_articles_for(

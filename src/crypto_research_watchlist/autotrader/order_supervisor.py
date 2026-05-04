@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def reconcile(*, engine, broker, lookback_hours: int = 48) -> SupervisorReport:
     )
 
     report = SupervisorReport()
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=lookback_hours)
+    cutoff = datetime.now(UTC) - timedelta(hours=lookback_hours)
 
     # --- Read paper portfolio first.
     cash = 0.0

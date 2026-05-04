@@ -25,8 +25,8 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta, timezone
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # When invoked via the local .venv-less interpreter, fall back to the venv's
@@ -160,7 +160,7 @@ def run_incremental(universe: list[str]) -> int:
 
     # Fetch a slightly wider window (INCREMENTAL_DAYS + 2) to handle TZ
     # boundary jitter and yfinance's exclusive end_date.
-    end = datetime.now(timezone.utc).date() + timedelta(days=1)
+    end = datetime.now(UTC).date() + timedelta(days=1)
     start = end - timedelta(days=INCREMENTAL_DAYS + 2)
 
     all_symbols = sorted(set(universe + BENCHMARKS + MACRO))
@@ -213,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
 
     all_symbols = sorted(set(universe + BENCHMARKS + MACRO))
 
-    end = datetime.now(timezone.utc).date()
+    end = datetime.now(UTC).date()
     start = end - timedelta(days=YEARS_BACK * 365 + 5)
     print(f"Backfilling {len(all_symbols)} symbols from {start} to {end}")
     print(f"  Universe: {len(universe)}")
@@ -251,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         "benchmarks": BENCHMARKS,
         "macro": MACRO,
         "years_back": YEARS_BACK,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }, indent=2))
     print(f"Wrote {sym_path}")
 

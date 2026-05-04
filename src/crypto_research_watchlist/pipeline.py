@@ -11,7 +11,7 @@ import json
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -79,7 +79,7 @@ def _drawdown_30d(price_df: pd.DataFrame | None) -> float | None:
         return None
     close = price_df.sort_values("date")["close"].astype(float).tail(31)
     peak = close.cummax()
-    return float((close.iloc[-1] / peak.max() - 1.0))
+    return float(close.iloc[-1] / peak.max() - 1.0)
 
 
 def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
@@ -105,10 +105,10 @@ def _price_extras(price_df: pd.DataFrame | None) -> dict | None:
     if len(df) >= 15 and {"high", "low", "close"}.issubset(df.columns):
         recent = df.tail(15)
         h = recent["high"].astype(float).to_numpy()
-        l = recent["low"].astype(float).to_numpy()
+        lo = recent["low"].astype(float).to_numpy()
         c = recent["close"].astype(float).to_numpy()
         prev_c = np.concatenate(([c[0]], c[:-1]))
-        tr = np.maximum.reduce([h - l, np.abs(h - prev_c), np.abs(l - prev_c)])
+        tr = np.maximum.reduce([h - lo, np.abs(h - prev_c), np.abs(lo - prev_c)])
         out["atr14"] = float(tr[-14:].mean())
     return out
 
@@ -153,7 +153,7 @@ def run_once(
     None and the legacy onchain_loader returns a dict containing
     ``open_interest_today``, those keys are still consumed here.
     """
-    run_at = datetime.now(timezone.utc)
+    run_at = datetime.now(UTC)
     price_loader = price_loader or parquet_price_loader()
 
     # News refresh is best-effort: failure logs WARNING, run continues.

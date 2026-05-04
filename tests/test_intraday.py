@@ -6,7 +6,7 @@ in an in-memory SQLite for engine tests.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,7 +20,6 @@ from crypto_research_watchlist.notifiers.intraday_notifier import (
     render_alert,
     send_intraday_telegram,
 )
-
 
 # ---------------------------------------------------------------------------
 # Notifier render tests (pure)
@@ -46,7 +45,7 @@ def _alert_with_both() -> IntradayAlert:
                     sentiment_score=-0.78, sentiment_label="negative"),
         ],
         scanned_symbols=10,
-        now=datetime(2026, 5, 2, 14, 0, tzinfo=timezone.utc),
+        now=datetime(2026, 5, 2, 14, 0, tzinfo=UTC),
     )
 
 
@@ -156,7 +155,7 @@ def _seed_prior_candidate(engine, symbol: str, score: float, action: str, *,
     from crypto_research_watchlist.models import CandidateRecord
 
     SessionLocal = session_factory(engine)
-    when = when or (datetime.now(timezone.utc) - timedelta(hours=1))
+    when = when or (datetime.now(UTC) - timedelta(hours=1))
     with session_scope(SessionLocal) as session:
         session.add(CandidateRecord(
             run_at=when, symbol=symbol, action=action, score=score,
@@ -170,7 +169,7 @@ def _seed_news(engine, *, title: str, sentiment: float, currencies: list[str],
     from crypto_research_watchlist.models import NewsArticle
 
     SessionLocal = session_factory(engine)
-    pub = datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)
+    pub = datetime.now(UTC) - timedelta(minutes=minutes_ago)
     label = "positive" if sentiment > 0.2 else "negative" if sentiment < -0.2 else "neutral"
     with session_scope(SessionLocal) as session:
         session.add(NewsArticle(

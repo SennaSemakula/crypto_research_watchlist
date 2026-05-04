@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
-
 from crypto_research_watchlist.data.coingecko_provider import (
     BASE_URL,
     DEMO_KEY_HEADER,

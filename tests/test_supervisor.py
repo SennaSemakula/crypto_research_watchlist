@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from crypto_research_watchlist.autotrader.order_supervisor import (
     format_supervisor_message,
@@ -49,14 +49,15 @@ def test_orphan_position_flagged(engine):
 
 
 def test_non_shadow_buy_without_position_flagged(engine):
+    from sqlalchemy.orm import Session
+
     from crypto_research_watchlist.models import (
         PassiveDecision as PassiveDecisionRow,
     )
-    from sqlalchemy.orm import Session
 
     with Session(engine) as s:
         s.add(PassiveDecisionRow(
-            run_at=datetime.now(timezone.utc),
+            run_at=datetime.now(UTC),
             symbol="ETH-USD", action="AUTO_BUY_FIRST_TRANCHE",
             accumulation_score=0.6, tranche_usd=100.0,
             reasons={"reasons": ["test"]}, shadow_mode=0,

@@ -16,7 +16,7 @@ Brevity is the point: when the universe is fully neutral, the message is
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from crypto_research_watchlist.candidates import Candidate
 from crypto_research_watchlist.notifiers.telegram import render_html
@@ -43,7 +43,7 @@ def _candidate(symbol: str, score: float, action: str, *, reason: str = "no nota
 
 def test_render_includes_institutional_sections():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
         candidates=[
             _candidate("BTC-USD", 78.0, "STRONG", reason="bullish MACD + funding negative"),
             _candidate("ETH-USD", 60.0, "WATCH"),
@@ -68,7 +68,7 @@ def test_render_includes_institutional_sections():
 def test_render_neutral_universe_is_brief():
     """When every candidate is mid-bucket WATCH/NEUTRAL the message stays short."""
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
         candidates=[
             _candidate("BTC-USD", 50.6, "WATCH"),
             _candidate("ETH-USD", 55.2, "WATCH"),
@@ -91,7 +91,7 @@ def test_render_neutral_universe_is_brief():
 
 def test_render_shows_closest_to_action_with_trigger():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[
             _candidate("ETH-USD", 60.0, "WATCH", reason="Outperforming BTC by 8 pts over 60d"),
             _candidate("SOL-USD", 46.0, "WATCH"),
@@ -107,7 +107,7 @@ def test_render_shows_closest_to_action_with_trigger():
 def test_render_avoid_block_only_when_present():
     """No AVOID names -> no Avoid block."""
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD", 60.0, "WATCH")],
     )
     html = render_html(result)
@@ -116,7 +116,7 @@ def test_render_avoid_block_only_when_present():
 
 def test_render_avoid_block_when_low_scoring_avoid_present():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[
             _candidate("BTC-USD", 60.0, "WATCH"),
             _candidate("LINK-USD", 35.0, "AVOID", reason="death cross + OI declining"),
@@ -137,7 +137,7 @@ def test_render_signals_fired_macd_cluster():
         _candidate("AVAX-USD", 47, "WATCH", signals={"technical": bear_macd_sig}),
         _candidate("DOT-USD", 45, "WATCH", signals={"technical": bear_macd_sig}),
     ]
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=timezone.utc), candidates=candidates)
+    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC), candidates=candidates)
     html = render_html(result)
     assert "bearish MACD" in html
     assert "SOL" in html
@@ -153,7 +153,7 @@ def test_render_signals_fired_underperforming_btc_cluster():
         _candidate("MATIC-USD", 42, "AVOID", signals={"cross_asset": weak_sig}),
         _candidate("ADA-USD", 44, "AVOID", signals={"cross_asset": weak_sig}),
     ]
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=timezone.utc), candidates=candidates)
+    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC), candidates=candidates)
     html = render_html(result)
     assert "underperforming BTC by >25pt" in html
 
@@ -161,7 +161,7 @@ def test_render_signals_fired_underperforming_btc_cluster():
 def test_render_when_no_signals_fire_says_so_explicitly():
     """Empty signals do NOT pad with empty section bodies."""
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD", 50, "WATCH")],
     )
     html = render_html(result)
@@ -170,7 +170,7 @@ def test_render_when_no_signals_fire_says_so_explicitly():
 
 def test_render_market_read_alts_firming():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD", 50, "WATCH")],
         market={
             "btc": {"last": 100000, "p1d": 0.0, "p7d": 0.0},
@@ -184,7 +184,7 @@ def test_render_market_read_alts_firming():
 
 def test_render_market_read_btc_capitulation():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD", 50, "WATCH")],
         market={
             "btc": {"last": 90000, "p1d": -0.03, "p7d": -0.12},
@@ -205,7 +205,7 @@ def test_render_paper_portfolio_one_liner(engine):
         session.add(PaperPosition(symbol="BTC-USD", quantity=0.1, avg_price=50000.0))
 
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD", 70.0, "WATCH")],
     )
     html = render_html(result, engine=engine)
@@ -217,7 +217,7 @@ def test_render_news_catalysts_only_when_high_impact(engine):
     from crypto_research_watchlist.news.sources import NewsArticleDTO
     from crypto_research_watchlist.news.store import upsert_articles
 
-    pub = datetime.now(timezone.utc) - timedelta(hours=1)
+    pub = datetime.now(UTC) - timedelta(hours=1)
     upsert_articles(engine, [
         NewsArticleDTO(
             source="coindesk",
@@ -229,7 +229,7 @@ def test_render_news_catalysts_only_when_high_impact(engine):
     ])
 
     result = RunResult(
-        run_at=datetime.now(timezone.utc),
+        run_at=datetime.now(UTC),
         candidates=[_candidate("BTC-USD", 70.0, "STRONG")],
     )
     html = render_html(result, engine=engine)
@@ -240,7 +240,7 @@ def test_render_news_catalysts_only_when_high_impact(engine):
 
 
 def test_render_handles_zero_candidates():
-    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=timezone.utc))
+    result = RunResult(run_at=datetime(2026, 5, 3, tzinfo=UTC))
     html = render_html(result)
     assert "Crypto Daily" in html
     assert "Universe empty" in html

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Literal
 
@@ -50,7 +50,7 @@ class RotateDecision:
 # ---------------------------------------------------------------------------
 
 
-class AggressiveAction(str, Enum):
+class AggressiveAction(str, Enum):  # noqa: UP042 - str(member) format must stay "AggressiveAction.BUY", not "BUY"
     BUY = "BUY"
     HOLD = "HOLD"
     ROTATE = "ROTATE"                  # exit current holding + enter new one
@@ -163,7 +163,7 @@ def evaluate_aggressive(
     Pure function: no I/O. cfg may be a CryptoConfig (with .aggressive) or
     an AggressiveConfig directly.
     """
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     acfg = cfg.aggressive if hasattr(cfg, "aggressive") else cfg
     cooldown_days = int(
         getattr(acfg, "cooldown_days", getattr(acfg, "cooldown_after_chase_trap_days", 3))
@@ -208,7 +208,7 @@ def evaluate_aggressive(
         last_trap = ctx.last_chase_trap_dates.get(symbol)
         if last_trap is not None:
             if last_trap.tzinfo is None:
-                last_trap = last_trap.replace(tzinfo=timezone.utc)
+                last_trap = last_trap.replace(tzinfo=UTC)
             days_since = (now - last_trap).total_seconds() / 86400.0
             if days_since < cooldown_days:
                 report.decisions.append(AggressiveDecision(
@@ -346,7 +346,7 @@ def run_once_aggressive(
     run_at: datetime | None = None,
 ) -> AggressiveReport:
     """Build context, evaluate, persist, return report."""
-    run_at = run_at or datetime.now(timezone.utc)
+    run_at = run_at or datetime.now(UTC)
     ctx = build_aggressive_context(
         run_result=run_result, held_symbol=held_symbol,
         held_rank_at_entry=held_rank_at_entry,
@@ -414,9 +414,12 @@ def rotate_decision(
 
     h_score = holding_signals.get("score")
     c_score = candidate_signals.get("score")
-    if h_score is not None and c_score is not None:
-        if (c_score - h_score) >= cfg.rotation_score_gap:
-            return RotateDecision(True, f"score gap {c_score - h_score:.1f} >= {cfg.rotation_score_gap}")
+    if (
+        h_score is not None
+        and c_score is not None
+        and (c_score - h_score) >= cfg.rotation_score_gap
+    ):
+        return RotateDecision(True, f"score gap {c_score - h_score:.1f} >= {cfg.rotation_score_gap}")
 
     h_rank_now = holding_signals.get("rank_now")
     h_rank_at_entry = holding_signals.get("rank_at_entry")

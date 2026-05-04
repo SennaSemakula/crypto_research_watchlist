@@ -52,6 +52,15 @@ target-version = "py311"
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C90"]
 ignore = ["E501", "B008", "B904", "B019", "C901"]
 
+[tool.ruff.lint.per-file-ignores]
+# Research scripts and their tests intentionally manipulate sys.path before
+# importing local modules (the dev-fallback pattern that locates the venv
+# site-packages or the scripts/research directory). E402 is the expected
+# cost of that pattern.
+"scripts/research/*.py" = ["E402"]
+"tests/test_backfill_incremental.py" = ["E402"]
+"tests/test_threshold_calibration_smoke.py" = ["E402"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q -m \"not integration\""

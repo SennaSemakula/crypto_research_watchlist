@@ -8,7 +8,7 @@ The pipeline must:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ def _summary() -> MarketSummary:
         btc_dominance_pct=52.3,
         eth_dominance_pct=18.1,
         total_volume_24h_usd=1.45e11,
-        fetched_at=datetime(2026, 5, 3, 12, 0, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
     )
 
 

@@ -21,14 +21,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-class PassiveAction(str, Enum):
+class PassiveAction(str, Enum):  # noqa: UP042 - str(member) format must stay "PassiveAction.AUTO_BUY", not "AUTO_BUY"
     AUTO_BUY_FIRST_TRANCHE = "AUTO_BUY_FIRST_TRANCHE"
     AUTO_ADD_TRANCHE = "AUTO_ADD_TRANCHE"
     AUTO_BUY_SHADOW = "AUTO_BUY_SHADOW"
@@ -105,11 +105,11 @@ class PassiveContext:
 
 
 def _iso_week_start(now: datetime | None = None) -> datetime:
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     if now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
+        now = now.replace(tzinfo=UTC)
     monday = now - timedelta(days=now.weekday())
-    return datetime(monday.year, monday.month, monday.day, tzinfo=timezone.utc)
+    return datetime(monday.year, monday.month, monday.day, tzinfo=UTC)
 
 
 def build_passive_context(
@@ -432,7 +432,7 @@ def run_once_passive(
     absent, defaults to the cfg portfolio total + no positions, which is
     appropriate for fresh-DB / first-run evaluations.
     """
-    run_at = run_at or datetime.now(timezone.utc)
+    run_at = run_at or datetime.now(UTC)
 
     cash_usd = float(cfg.portfolio.cash_available_usd)
     positions_usd: dict[str, float] = {}

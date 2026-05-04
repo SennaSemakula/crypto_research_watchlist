@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from datetime import UTC
 
 import pytest
 
 from crypto_research_watchlist.autotrader.passive import (
     PassiveAction,
-    PassiveContext,
-    PassiveReport,
     build_passive_context,
     evaluate,
     persist_decisions,
@@ -241,12 +239,13 @@ def test_stablecoin_depeg_blocks_all_buys():
 # ---- Persistence -----------------------------------------------------------
 
 def test_persist_decisions_writes_rows(engine):
-    from datetime import datetime, timezone
+    from datetime import datetime
+
+    from sqlalchemy.orm import Session
 
     from crypto_research_watchlist.models import (
         PassiveDecision as PassiveDecisionRow,
     )
-    from sqlalchemy.orm import Session
 
     cfg = _cfg()
     candidate = _StubCandidate(
@@ -259,7 +258,7 @@ def test_persist_decisions_writes_rows(engine):
         positions_by_symbol_usd={},
     )
     report = evaluate(cfg=cfg.crypto, run_result=result, ctx=ctx)
-    n = persist_decisions(engine, datetime.now(timezone.utc), report)
+    n = persist_decisions(engine, datetime.now(UTC), report)
     assert n == len(report.decisions)
     with Session(engine) as s:
         rows = s.query(PassiveDecisionRow).all()

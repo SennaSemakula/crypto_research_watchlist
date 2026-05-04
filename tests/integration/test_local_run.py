@@ -23,8 +23,9 @@ pytestmark = pytest.mark.integration
 def test_pipeline_run_with_telegram(caplog):
     # Eager-load .env so we pick up keys when invoked outside the CLI.
     try:
-        from dotenv import load_dotenv
         from pathlib import Path
+
+        from dotenv import load_dotenv
         load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
     except Exception:
         pass
@@ -50,14 +51,14 @@ def test_pipeline_run_with_telegram(caplog):
 
     report = refresh_news(engine, cfg.crypto)
     print("\nNEWS REFRESH BY SOURCE:", report.by_source)
-    print("NEWS REFRESH inserted=%s skipped=%s" % (report.inserted, report.skipped))
+    print(f"NEWS REFRESH inserted={report.inserted} skipped={report.skipped}")
 
     # CryptoCompare must show up; >0 indicates the new pipe is live.
     assert "cryptocompare" in report.by_source
 
     # Run the full pipeline. Telegram send below uses the candidates.
     result = run_once(cfg=cfg, engine=engine, refresh_news=False, write_report=False)
-    print("PIPELINE candidates=%d" % len(result.candidates))
+    print(f"PIPELINE candidates={len(result.candidates)}")
 
     cfg.notifications.telegram = True
     from crypto_research_watchlist.notifiers.telegram import TelegramNotifier

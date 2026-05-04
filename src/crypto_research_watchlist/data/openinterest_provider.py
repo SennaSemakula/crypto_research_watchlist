@@ -20,7 +20,7 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -88,7 +88,7 @@ class OpenInterestProvider:
 
     # ---- Cache -------------------------------------------------------------
     def _disk_path(self, symbol: str) -> Path:
-        date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+        date_str = datetime.now(UTC).strftime("%Y%m%d")
         safe = symbol.replace("/", "_").replace(":", "_")
         return self._cache_dir / f"{safe}_{date_str}.json"
 

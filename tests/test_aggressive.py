@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from crypto_research_watchlist.autotrader.aggressive import (
     AggressiveAction,
     build_aggressive_context,
     evaluate_aggressive,
-    is_chase_trap,
     persist_aggressive_decisions,
 )
 from crypto_research_watchlist.config import load_app_config
@@ -84,7 +81,7 @@ def test_cooldown_blocks_recent_chase_trap():
         extras={"px": _px(p1d=0.05, p7d=0.10)},
     )
     result = _StubResult(candidates=[candidate])
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ctx = build_aggressive_context(
         run_result=result,
         last_chase_trap_dates={"ETH-USD": now - timedelta(days=1)},
@@ -100,7 +97,7 @@ def test_cooldown_expires_after_n_days():
         extras={"px": _px(p1d=0.05, p7d=0.10, p30d=0.30)},
     )
     result = _StubResult(candidates=[candidate])
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ctx = build_aggressive_context(
         run_result=result,
         last_chase_trap_dates={"ETH-USD": now - timedelta(days=10)},
@@ -170,10 +167,11 @@ def test_buy_top_when_no_holding_and_strong():
 
 
 def test_persist_writes_rows(engine):
+    from sqlalchemy.orm import Session
+
     from crypto_research_watchlist.models import (
         AggressiveDecision as AggressiveDecisionRow,
     )
-    from sqlalchemy.orm import Session
 
     cfg = load_app_config()
     candidate = _StubCandidate(
@@ -183,7 +181,7 @@ def test_persist_writes_rows(engine):
     result = _StubResult(candidates=[candidate])
     ctx = build_aggressive_context(run_result=result)
     report = evaluate_aggressive(cfg=cfg.crypto, ctx=ctx)
-    n = persist_aggressive_decisions(engine, datetime.now(timezone.utc), report)
+    n = persist_aggressive_decisions(engine, datetime.now(UTC), report)
     assert n == len(report.decisions)
     with Session(engine) as s:
         rows = s.query(AggressiveDecisionRow).all()

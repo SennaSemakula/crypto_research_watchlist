@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -49,7 +48,7 @@ def test_run_sweep_writes_json(tmp_path, monkeypatch):
     monkeypatch.setattr(cs, "HIST", hist)
 
     out_path = tmp_path / "calibration_test.json"
-    res = cs.run_sweep(
+    cs.run_sweep(
         chase_grid=[0.20, 0.30],
         gap_grid=[15.0],
         dip_grid=[0.05, 0.08],

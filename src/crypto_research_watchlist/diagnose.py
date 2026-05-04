@@ -25,7 +25,7 @@ Pure: no Telegram, no DB writes. Safe to call before/after a daily run.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -144,7 +144,7 @@ def _parquet_freshness(parquet_path: Path = DEFAULT_PARQUET) -> str:
     try:
         df = pd.read_parquet(parquet_path, columns=["date"])
         latest = pd.to_datetime(df["date"]).max()
-        today = datetime.now(timezone.utc).date()
+        today = datetime.now(UTC).date()
         delta = (today - latest.date()).days
         marker = "fresh" if delta <= 1 else f"{delta} days stale"
         return f"parquet: latest={latest.date()} ({marker}, today={today})"

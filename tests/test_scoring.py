@@ -15,7 +15,6 @@ from crypto_research_watchlist.scoring import (
     volatility_feature,
 )
 
-
 # ---- Per-feature isolation -------------------------------------------------
 
 def test_momentum_feature_maps_neg_one_to_zero():

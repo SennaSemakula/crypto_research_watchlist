@@ -11,7 +11,7 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from crypto_research_watchlist.candidates import Candidate
 from crypto_research_watchlist.notifiers.telegram import (
@@ -49,7 +49,7 @@ def test_render_today_neutral_cluster_is_under_25_lines():
         _cand("MATIC-USD", 44.0, "AVOID"),
     ]
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 8, 0, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, 8, 0, tzinfo=UTC),
         candidates=candidates,
     )
     html = render_html(result)
@@ -88,7 +88,7 @@ def test_should_send_when_no_prior_snapshot(engine):
 
 
 def test_should_send_when_top3_changes(engine):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday = datetime.now(UTC) - timedelta(hours=24)
     _seed_prior_snapshot(engine, run_at=yesterday, rows=[
         ("BTC-USD", 60.0, "WATCH"),
         ("ETH-USD", 58.0, "WATCH"),
@@ -106,7 +106,7 @@ def test_should_send_when_top3_changes(engine):
 
 
 def test_should_send_when_score_moves_more_than_tolerance(engine):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday = datetime.now(UTC) - timedelta(hours=24)
     _seed_prior_snapshot(engine, run_at=yesterday, rows=[
         ("BTC-USD", 60.0, "WATCH"),
         ("ETH-USD", 55.0, "WATCH"),
@@ -122,7 +122,7 @@ def test_should_send_when_score_moves_more_than_tolerance(engine):
 
 
 def test_should_send_when_bucket_changes(engine):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday = datetime.now(UTC) - timedelta(hours=24)
     _seed_prior_snapshot(engine, run_at=yesterday, rows=[
         ("BTC-USD", 70.0, "WATCH"),
         ("ETH-USD", 55.0, "WATCH"),
@@ -139,7 +139,7 @@ def test_should_send_when_bucket_changes(engine):
 
 
 def test_should_suppress_when_nothing_material_changed(engine):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    yesterday = datetime.now(UTC) - timedelta(hours=24)
     _seed_prior_snapshot(engine, run_at=yesterday, rows=[
         ("BTC-USD", 60.0, "WATCH"),
         ("ETH-USD", 55.0, "WATCH"),

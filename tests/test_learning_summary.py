@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
-import pytest
 
 from crypto_research_watchlist.autotrader.learning_summary import (
     build_weekly_summary,
@@ -16,6 +15,8 @@ from crypto_research_watchlist.autotrader.learning_summary import (
 
 
 def _seed_decisions(engine):
+    from sqlalchemy.orm import Session
+
     from crypto_research_watchlist.models import (
         AggressiveDecision as AggressiveDecisionRow,
     )
@@ -25,9 +26,8 @@ def _seed_decisions(engine):
     from crypto_research_watchlist.models import (
         PassiveDecision as PassiveDecisionRow,
     )
-    from sqlalchemy.orm import Session
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     with Session(engine) as s:
         # This-week decisions.
         for i in range(3):
@@ -90,8 +90,9 @@ def test_persist_summary_writes_row(engine):
     summary = build_weekly_summary(engine=engine, weeks_back=1)
     persist_summary(engine, summary)
 
-    from crypto_research_watchlist.models import LearningSummaryRecord
     from sqlalchemy.orm import Session
+
+    from crypto_research_watchlist.models import LearningSummaryRecord
 
     with Session(engine) as s:
         rows = s.query(LearningSummaryRecord).all()
@@ -101,11 +102,12 @@ def test_persist_summary_writes_row(engine):
 
 def test_hit_rate_back_eval_with_synthetic_parquet(engine, tmp_path, monkeypatch):
     """Construct a tiny parquet, check that fwd-7d hit rate runs."""
-    from crypto_research_watchlist.autotrader import learning_summary as ls
-    from crypto_research_watchlist.models import CandidateRecord
     from sqlalchemy.orm import Session
 
-    now = datetime.now(timezone.utc)
+    from crypto_research_watchlist.autotrader import learning_summary as ls
+    from crypto_research_watchlist.models import CandidateRecord
+
+    now = datetime.now(UTC)
     # Seed prior-week candidates.
     with Session(engine) as s:
         s.add(CandidateRecord(
@@ -132,7 +134,6 @@ def test_hit_rate_back_eval_with_synthetic_parquet(engine, tmp_path, monkeypatch
     pd.DataFrame(rows).to_parquet(parquet)
 
     # Patch parquet loader to point at the temp file.
-    real_loader = ls._try_load_parquet
     monkeypatch.setattr(
         ls, "_try_load_parquet",
         lambda: pd.read_parquet(parquet).assign(date=lambda d: pd.to_datetime(d["date"])),

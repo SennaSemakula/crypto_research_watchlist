@@ -44,6 +44,7 @@ def test_run_once_produces_candidates_for_each_universe_member(cfg_demo, engine)
 
 def test_run_once_persists_records(cfg_demo, engine):
     from sqlalchemy import select
+
     from crypto_research_watchlist.db import session_factory, session_scope
     from crypto_research_watchlist.models import CandidateRecord, SignalRecord
 

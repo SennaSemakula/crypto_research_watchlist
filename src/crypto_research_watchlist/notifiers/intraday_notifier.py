@@ -17,8 +17,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Iterable
+from datetime import UTC, datetime
 
 from .telegram import _chunk, _escape
 
@@ -61,7 +60,7 @@ class IntradayAlert:
     score_moves: list[ScoreMove] = field(default_factory=list)
     news_hits: list[NewsHit] = field(default_factory=list)
     scanned_symbols: int = 0
-    now: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    now: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def has_signal(self) -> bool:
         return bool(self.score_moves or self.news_hits)

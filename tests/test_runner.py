@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC
+
 from crypto_research_watchlist.autotrader.paper_broker import PaperBroker
 from crypto_research_watchlist.autotrader.runner import RunnerOutcome, run, select_targets
 from crypto_research_watchlist.candidates import Candidate
@@ -47,8 +49,8 @@ def test_runner_is_idempotent_within_same_run(cfg_demo, engine):
     prices = {"BTC-USD": 50000.0}
     broker = PaperBroker(engine, quote_fn=lambda s: prices.get(s), starting_cash=5000)
     ranked = [_candidate("BTC-USD", "STRONG", 0.7)]
-    from datetime import datetime, timezone
-    run_dt = datetime(2026, 5, 2, tzinfo=timezone.utc)
+    from datetime import datetime
+    run_dt = datetime(2026, 5, 2, tzinfo=UTC)
     a = run(cfg_demo, broker, lambda s: prices.get(s), ranked, run_dt=run_dt)
     b = run(cfg_demo, broker, lambda s: prices.get(s), ranked, run_dt=run_dt)
     assert any(r.status == "FILLED" for r in a.placed)

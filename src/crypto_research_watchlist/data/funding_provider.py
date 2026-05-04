@@ -14,10 +14,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -103,7 +102,7 @@ class FundingRateProvider:
 
     # ---- Cache helpers -----------------------------------------------------
     def _disk_path(self, symbol: str) -> Path:
-        date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+        date_str = datetime.now(UTC).strftime("%Y%m%d")
         safe = symbol.replace("/", "_").replace(":", "_")
         return self._cache_dir / f"{safe}_{date_str}.json"
 
@@ -163,7 +162,7 @@ class FundingRateProvider:
 
         if rates:
             self._cache_put(cache_key, rates)
-            self._save_disk(symbol, {"rates": rates, "fetched_at": datetime.now(timezone.utc).isoformat()})
+            self._save_disk(symbol, {"rates": rates, "fetched_at": datetime.now(UTC).isoformat()})
         return rates
 
     # ---- Per-exchange fetchers --------------------------------------------

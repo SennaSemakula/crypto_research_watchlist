@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Dev fallback: if there is no externally-managed environment, point at the
@@ -270,7 +270,7 @@ def main() -> None:
 
     symbol_share = trades_df.symbol.value_counts(normalize=True) * 100 if len(trades_df) else pd.Series(dtype=float)
 
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     eq_path = REPORTS / "baseline_backtest_equity.csv"
     tr_path = REPORTS / "baseline_backtest_trades.csv"
     md_path = REPORTS / f"baseline_backtest_{today}.md"
@@ -281,7 +281,7 @@ def main() -> None:
     lines: list[str] = []
     lines.append("# Crypto Baseline Backtest — simplified AGGRESSIVE_ROTATION")
     lines.append("")
-    lines.append(f"_Generated {datetime.now(timezone.utc).isoformat()}_")
+    lines.append(f"_Generated {datetime.now(UTC).isoformat()}_")
     lines.append("")
     lines.append("Price-only approximation. Captures 60d momentum top-1 selection,")
     lines.append("30% chase-trap filter (5d), rotation on rank-drop or chase-trap exit,")
@@ -307,7 +307,7 @@ def main() -> None:
         return f"{v:.2f}" if not pd.isna(v) else "n/a"
     keys = ("total_return_pct", "cagr_pct", "sharpe", "max_dd_pct")
     labels = ("Total return %", "CAGR %", "Sharpe", "Max drawdown %")
-    for k, lbl in zip(keys, labels):
+    for k, lbl in zip(keys, labels, strict=True):
         row = f"| {lbl} | {fmt(strat_metrics, k)} "
         for sym in ("BTC-USD", "ETH-USD", "SPY"):
             row += f"| {fmt(bench_metrics.get(sym, {}), k)} "

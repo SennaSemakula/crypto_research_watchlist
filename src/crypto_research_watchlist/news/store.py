@@ -8,7 +8,7 @@ the first-fetched version is fine).
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -47,7 +47,7 @@ def upsert_articles(engine, articles: list[NewsArticleDTO]) -> tuple[int, int]:
                 title=art.title[:1024],
                 body=(art.body or "")[:8192] or None,
                 published_at=_aware(art.published_at),
-                fetched_at=datetime.now(timezone.utc),
+                fetched_at=datetime.now(UTC),
                 currencies_json=list(art.raw_currencies),
                 sentiment_score=float(sent.score),
                 sentiment_label=sent.label,
@@ -68,5 +68,5 @@ def upsert_articles(engine, articles: list[NewsArticleDTO]) -> tuple[int, int]:
 
 def _aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt

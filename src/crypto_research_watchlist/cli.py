@@ -14,6 +14,7 @@ Subcommands:
 from __future__ import annotations
 
 import logging
+from datetime import UTC
 
 import typer
 
@@ -63,7 +64,7 @@ def cli_run(
     # Wire the real free-tier providers. Each one is fail-safe: any
     # exception inside a loader returns None / [] / {} and the corresponding
     # signal stays neutral.
-    from .data.etherscan_provider import EtherscanProvider, SYMBOL_TO_CHAIN
+    from .data.etherscan_provider import SYMBOL_TO_CHAIN, EtherscanProvider
     from .data.funding_provider import FundingRateProvider
     from .data.onchain_provider import OnChainProvider
     from .data.openinterest_provider import OpenInterestProvider
@@ -202,8 +203,8 @@ def cli_passive(
     engine = init_db(env.database_url)
     result = run_once(cfg=cfg, engine=engine, write_report=False)
 
-    from .autotrader.passive import run_once_passive
     from .autotrader.paper_broker import PaperBroker
+    from .autotrader.passive import run_once_passive
 
     def _quote(symbol: str) -> float | None:
         for c in result.candidates:
@@ -471,14 +472,14 @@ def _recent_high_impact_news(engine, *, lookback_minutes: int, min_magnitude: fl
     """
     from .notifiers.intraday_notifier import NewsHit
     try:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from sqlalchemy import or_
         from sqlalchemy.orm import Session
 
         from .models import NewsArticle
 
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=lookback_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=lookback_minutes)
         hits: list[NewsHit] = []
         with Session(engine) as session:
             rows = session.query(NewsArticle).filter(

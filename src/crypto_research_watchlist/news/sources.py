@@ -18,7 +18,7 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class _HTTPClient(Protocol):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _parse_iso(ts: str | None) -> datetime:
@@ -177,7 +177,7 @@ def fetch_cryptocompare(
         ts = row.get("published_on")
         try:
             published_at = (
-                datetime.fromtimestamp(float(ts), tz=timezone.utc)
+                datetime.fromtimestamp(float(ts), tz=UTC)
                 if ts is not None
                 else _utcnow()
             )
@@ -258,7 +258,7 @@ def parse_rss(source_name: str, text: str, *, limit: int = 50) -> list[NewsArtic
             from email.utils import parsedate_to_datetime
             published_at = parsedate_to_datetime(published_iso)
             if published_at.tzinfo is None:
-                published_at = published_at.replace(tzinfo=timezone.utc)
+                published_at = published_at.replace(tzinfo=UTC)
         except Exception:
             published_at = _utcnow()
         body = entry.get("summary") or None
@@ -324,7 +324,7 @@ def fetch_reddit(
             continue
         ts = d.get("created_utc")
         try:
-            published_at = datetime.fromtimestamp(float(ts), tz=timezone.utc) if ts else _utcnow()
+            published_at = datetime.fromtimestamp(float(ts), tz=UTC) if ts else _utcnow()
         except Exception:
             published_at = _utcnow()
         out.append(NewsArticleDTO(

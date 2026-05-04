@@ -17,7 +17,6 @@ from crypto_research_watchlist.config import EnvSettings, load_app_config
 from crypto_research_watchlist.diagnose import run_diagnose
 from crypto_research_watchlist.pipeline import parquet_price_loader
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

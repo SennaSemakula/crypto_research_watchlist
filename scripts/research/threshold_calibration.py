@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 # Dev fallback for venv site-packages.
@@ -45,8 +45,11 @@ from crypto_research_watchlist.scoring import (  # noqa: E402
     rel_strength_feature,
     volatility_feature,
 )
-from crypto_research_watchlist.signals import SignalContext  # noqa: E402
-from crypto_research_watchlist.signals import cross_asset, technical  # noqa: E402
+from crypto_research_watchlist.signals import (  # noqa: E402
+    SignalContext,  # noqa: E402
+    cross_asset,
+    technical,
+)
 
 
 def _per_symbol_scores(prices: pd.DataFrame, sample_every_days: int = 7) -> list[float]:
@@ -143,7 +146,7 @@ def calibrate(
     n_neutral = n - n_strong - n_watch - n_avoid
 
     out = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "n_scores": n,
         "score_stats": {
             "min": float(arr.min()),

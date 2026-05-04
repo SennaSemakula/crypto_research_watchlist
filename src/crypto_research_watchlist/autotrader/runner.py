@@ -14,7 +14,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ..candidates import Candidate
 from ..config import AppConfig
@@ -56,7 +56,7 @@ def run(
     *,
     run_dt: datetime | None = None,
 ) -> RunnerOutcome:
-    run_dt = run_dt or datetime.now(timezone.utc)
+    run_dt = run_dt or datetime.now(UTC)
     placed: list[FillResult] = []
     skipped: list[tuple[str, str]] = []
 

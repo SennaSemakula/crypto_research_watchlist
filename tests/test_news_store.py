@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from crypto_research_watchlist.news.lookup import (
     count_recent,
@@ -14,7 +14,7 @@ from crypto_research_watchlist.news.store import upsert_articles
 
 
 def _dto(*, url: str, title: str, currencies: list[str], hours_ago: int = 1, source: str = "coindesk") -> NewsArticleDTO:
-    pub = datetime.now(timezone.utc).replace(microsecond=0)
+    pub = datetime.now(UTC).replace(microsecond=0)
     pub = pub.replace(year=pub.year, month=pub.month)
     # Use timedelta to keep arithmetic correct.
     from datetime import timedelta

@@ -29,6 +29,7 @@ on line boundaries via ``_chunk``. Score is 0-100 (post 2026-05).
 from __future__ import annotations
 
 import logging
+from datetime import UTC
 from typing import Protocol
 
 from ..config import AppConfig, EnvSettings
@@ -284,8 +285,6 @@ def _todays_read(candidates) -> list[str]:
 
     n = len(candidates)
     n_strong = len(buckets["STRONG"])
-    n_watch = len(buckets["WATCH"])
-    n_avoid = len(buckets["AVOID"])
 
     # Headline — the institutional take on whether today is actionable.
     if n_strong >= 1:
@@ -567,7 +566,7 @@ def should_send_daily(
         return True, "no engine to compare against"
 
     try:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from sqlalchemy import desc, select
 
@@ -586,7 +585,7 @@ def should_send_daily(
 
         # Yesterday's snapshot — most recent CandidateRecord run before
         # today's run.
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
+        cutoff = datetime.now(UTC) - timedelta(hours=2)
         with session_scope(SessionLocal) as session:
             prior_run_at = session.scalars(
                 select(CandidateRecord.run_at)

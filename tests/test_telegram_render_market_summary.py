@@ -10,7 +10,7 @@ separate block.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from crypto_research_watchlist.candidates import Candidate
 from crypto_research_watchlist.data.coingecko_provider import MarketSummary
@@ -40,7 +40,7 @@ def _summary(**overrides):
         btc_dominance_pct=52.3,
         eth_dominance_pct=18.1,
         total_volume_24h_usd=1.45e11,
-        fetched_at=datetime(2026, 5, 3, 12, 0, tzinfo=timezone.utc),
+        fetched_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
     )
     base.update(overrides)
     return MarketSummary(**base)
@@ -48,7 +48,7 @@ def _summary(**overrides):
 
 def test_render_with_summary_includes_mcap_and_dominance():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, 12, 0, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
         market={
             "btc": {"last": 103200.0, "p1d": 0.012, "p7d": -0.004},
@@ -65,7 +65,7 @@ def test_render_with_summary_includes_mcap_and_dominance():
 
 def test_render_without_summary_has_no_summary_line():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
         market={
             "btc": {"last": 103200.0, "p1d": 0.012, "p7d": -0.004},
@@ -85,7 +85,7 @@ def test_render_with_summary_missing_some_fields_partial_line():
     """If CoinGecko returns a partial payload, only present fields render."""
     s = _summary(eth_dominance_pct=None, total_volume_24h_usd=None)
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
         market={
             "btc": {"last": 103200.0, "p1d": 0.0, "p7d": 0.0},
@@ -100,7 +100,7 @@ def test_render_with_summary_missing_some_fields_partial_line():
 
 def test_render_with_no_market_no_crash():
     result = RunResult(
-        run_at=datetime(2026, 5, 3, tzinfo=timezone.utc),
+        run_at=datetime(2026, 5, 3, tzinfo=UTC),
         candidates=[_candidate("BTC-USD")],
         market={},
     )

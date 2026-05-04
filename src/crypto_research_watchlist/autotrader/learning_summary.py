@@ -18,9 +18,9 @@ from __future__ import annotations
 import html
 import logging
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -107,7 +107,7 @@ def build_weekly_summary(
         PassiveDecision as PassiveDecisionRow,
     )
 
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     week_end = now
     week_start = now - timedelta(days=7 * max(1, weeks_back))
     prior_week_start = week_start - timedelta(days=7)
@@ -193,7 +193,7 @@ def render_markdown(summary: WeeklyLearningSummary) -> str:
         f"{summary.week_end.date().isoformat()}"
     )
     lines.append("")
-    lines.append(f"_Generated {datetime.now(timezone.utc).isoformat(timespec='minutes')}_")
+    lines.append(f"_Generated {datetime.now(UTC).isoformat(timespec='minutes')}_")
     lines.append("")
     lines.append("## Decision counts")
     lines.append("")
@@ -261,10 +261,10 @@ def render_telegram(summary: WeeklyLearningSummary) -> str:
 
     if summary.passive_action_counts:
         chunks = [f"{k}={v}" for k, v in sorted(summary.passive_action_counts.items())]
-        lines.append(f"\n<b>Passive</b>: " + _esc(" · ".join(chunks)))
+        lines.append("\n<b>Passive</b>: " + _esc(" · ".join(chunks)))
     if summary.aggressive_action_counts:
         chunks = [f"{k}={v}" for k, v in sorted(summary.aggressive_action_counts.items())]
-        lines.append(f"<b>Aggressive</b>: " + _esc(" · ".join(chunks)))
+        lines.append("<b>Aggressive</b>: " + _esc(" · ".join(chunks)))
 
     if summary.hit_rate_pct is not None:
         lines.append(
@@ -330,7 +330,7 @@ def persist_summary(engine, summary: WeeklyLearningSummary) -> None:
     }
     with Session(engine) as s:
         s.add(LearningSummaryRecord(
-            run_at=datetime.now(timezone.utc),
+            run_at=datetime.now(UTC),
             week_ending=summary.week_end,
             payload=payload,
         ))

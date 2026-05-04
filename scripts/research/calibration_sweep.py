@@ -31,7 +31,6 @@ if _VENV_SP.exists() and str(_VENV_SP) not in sys.path:
 
 import numpy as np
 import pandas as pd
-
 from lib_calibration import HIST, close_panel, load_prices
 
 DEFAULT_CHASE_GRID = [0.20, 0.25, 0.30, 0.35, 0.40]

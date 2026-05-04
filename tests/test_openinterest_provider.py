@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from crypto_research_watchlist.data.openinterest_provider import OpenInterestProvider
 
 
