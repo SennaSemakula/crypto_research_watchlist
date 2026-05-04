@@ -36,9 +36,16 @@ scoring:
     funding_signal: 0.10   # placeholder; routine-c will source it later
     drawdown_penalty: 0.15
   thresholds:
-    strong: 72
+    # Calibrated 2026-05-04 against the parquet history (n=2432 scores).
+    # Targets ~10% STRONG / ~30% WATCH / ~50% NEUTRAL / ~10% AVOID;
+    # realised distribution 9.8 / 29.4 / 50.8 / 10.0. The previous
+    # 72/55/40 thresholds almost never tripped STRONG once cross_asset
+    # and technical were the only fully-wired signals (parquet-only).
+    # See data/historical/threshold_calibration_2026-05-04.json for the
+    # underlying score distribution.
+    strong: 64.5
     watchlist: 55
-    avoid: 40
+    avoid: 40.5
 
 risk_limits:
   # Crypto-tuned: more permissive than stocks because the asset class is fatter-tailed.
