@@ -33,6 +33,34 @@ def _clean_env(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _no_network_news(monkeypatch):
+    """Prevent any test from hitting live RSS / news APIs.
+
+    Several callsites import refresh_news lazily (inside functions), so we
+    patch every known import path. The replacement returns an empty
+    NewsRefreshReport so callers that read .inserted / .by_source still work.
+    """
+    from crypto_research_watchlist.news.orchestrator import NewsRefreshReport
+
+    def _noop(*args, **kwargs):
+        return NewsRefreshReport()
+
+    # Canonical home of refresh_news.
+    monkeypatch.setattr(
+        "crypto_research_watchlist.news.orchestrator.refresh_news",
+        _noop,
+        raising=False,
+    )
+    # Re-exported binding on the news package.
+    monkeypatch.setattr(
+        "crypto_research_watchlist.news.refresh_news",
+        _noop,
+        raising=False,
+    )
+    yield
+
+
 @pytest.fixture()
 def repo_root() -> Path:
     return ROOT
