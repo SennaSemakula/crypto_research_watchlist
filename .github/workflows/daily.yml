@@ -27,7 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          # Fetch enough history to safely rebase before pushing the
+          # report commit at the end. The 07:30 UTC backfill workflow
+          # commits a refreshed parquet to main, so this checkout will
+          # pick it up unless it raced.
+          fetch-depth: 5
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.13

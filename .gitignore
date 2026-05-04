@@ -21,3 +21,7 @@ dist/
 .DS_Store
 .env.swp
 .agent_panic
+
+# Test smoke artifacts (regenerated each pytest run; don't churn diffs).
+data/historical/diagnose_btc_eth.txt
+data/historical/telegram_sample_today.html
