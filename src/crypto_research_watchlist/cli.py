@@ -133,10 +133,16 @@ def cli_run(
         typer.echo(f"report: {result.report_path}")
 
     if send_telegram:
-        from .notifiers.telegram import TelegramNotifier
+        from .notifiers.telegram import TelegramNotifier, should_send_daily
         cfg.notifications.telegram = True
+
+        send, reason = should_send_daily(engine=engine, candidates=result.candidates)
+        if not send:
+            typer.echo(f"telegram: skipped ({reason})")
+            return
+
         outcome = TelegramNotifier(cfg, env, engine=engine).send(result)
-        typer.echo(f"telegram: status={outcome.status} error={outcome.error or '-'}")
+        typer.echo(f"telegram: status={outcome.status} error={outcome.error or '-'} reason={reason}")
         if outcome.status in {"failed", "partial"}:
             raise typer.Exit(code=1)
 

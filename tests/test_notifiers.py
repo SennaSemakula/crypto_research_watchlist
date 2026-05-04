@@ -20,16 +20,16 @@ def test_html_escape_basic():
 
 
 def test_render_html_includes_top_candidates():
+    """The institutional render names the closest-to-action candidate."""
     result = RunResult(
         run_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
         candidates=[
-            Candidate(symbol="BTC-USD", score=0.8, action="STRONG", reason="bullets here"),
-            Candidate(symbol="ETH-USD", score=0.5, action="WATCH", reason="watch reason"),
+            Candidate(symbol="BTC-USD", score=78.0, action="STRONG", reason="bullets here"),
+            Candidate(symbol="ETH-USD", score=65.0, action="WATCH", reason="watch reason"),
         ],
     )
     html = _render_html(result)
-    assert "BTC-USD" in html
-    assert "[STRONG]" in html
-    assert "ETH-USD" in html
-    assert "Crypto Daily Watchlist" in html
-    assert "RANKED CANDIDATES" in html
+    assert "BTC" in html
+    assert "ETH" in html
+    assert "Crypto Daily" in html
+    assert "Today's read" in html

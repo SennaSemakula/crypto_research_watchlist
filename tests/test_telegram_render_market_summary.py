@@ -1,8 +1,11 @@
-"""Telegram render tests for the new CoinGecko market summary line.
+"""Telegram render tests for the CoinGecko market summary line.
 
-Verifies that the Market block extends with a 'Total mcap / BTC.D / ETH.D'
-line when result.market["summary"] is present, and renders cleanly
-without that line when the summary is None.
+Verifies the Market regime block extends with BTC.D / total mcap when
+result.market["summary"] is present, and renders cleanly when absent.
+
+The institutional-voice render renders the summary inline on the second
+market line ("ETH/BTC ... | BTC.D ... | Total mcap ..."), not as a
+separate block.
 """
 
 from __future__ import annotations
@@ -26,7 +29,8 @@ def _candidate(symbol: str) -> Candidate:
         reason="ok",
         signals={},
         risk=risk,
-        extras={"px": {"last": 100.0, "p1d": 0.0, "p7d": 0.01, "p30d": 0.05, "atr14": 4.0, "high30": 110.0}},
+        extras={"px": {"last": 100.0, "p1d": 0.0, "p7d": 0.01, "p30d": 0.05,
+                       "atr14": 4.0, "high30": 110.0, "low30": 92.0}},
     )
 
 
@@ -55,10 +59,8 @@ def test_render_with_summary_includes_mcap_and_dominance():
     html = render_html(result)
     assert "Total mcap" in html
     assert "BTC.D" in html
-    assert "ETH.D" in html
     assert "$3.42T" in html
     assert "52.3%" in html
-    assert "18.1%" in html
 
 
 def test_render_without_summary_has_no_summary_line():
@@ -94,8 +96,6 @@ def test_render_with_summary_missing_some_fields_partial_line():
     html = render_html(result)
     assert "Total mcap" in html
     assert "BTC.D 52.3%" in html
-    # ETH.D missing -> not rendered.
-    assert "ETH.D" not in html
 
 
 def test_render_with_no_market_no_crash():
@@ -105,4 +105,4 @@ def test_render_with_no_market_no_crash():
         market={},
     )
     html = render_html(result)
-    assert "Crypto Daily Watchlist" in html
+    assert "Crypto Daily" in html
