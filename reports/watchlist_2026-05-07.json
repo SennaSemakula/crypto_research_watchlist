@@ -1,0 +1,374 @@
+{
+  "run_at": "2026-05-07T08:49:33.265431+00:00",
+  "candidates": [
+    {
+      "symbol": "LINK-USD",
+      "score": 67.86,
+      "action": "STRONG",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "STRONG_BULLISH",
+          "strength": 0.8,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum",
+            "Golden cross: 20-EMA crossed above 50-EMA"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 5 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "ADA-USD",
+      "score": 58.47,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 16 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "BTC-USD",
+      "score": 58.15,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum; ETH/BTC down 8% in 30d: BTC firming vs alts",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "ETH/BTC down 8% in 30d: BTC firming vs alts"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "AVAX-USD",
+      "score": 57.68,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 14 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "SOL-USD",
+      "score": 56.97,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 13 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "DOT-USD",
+      "score": 56.35,
+      "action": "WATCH",
+      "reason": "Underperforming BTC by 32 pts over 60d",
+      "signals": {
+        "technical": {
+          "label": "NEUTRAL",
+          "strength": 0.15,
+          "bullets": [
+            "MACD crossing up below zero: early trend"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "BEARISH",
+          "strength": -0.5,
+          "bullets": [
+            "Underperforming BTC by 32 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "XRP-USD",
+      "score": 51.38,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 18 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "MATIC-USD",
+      "score": 51.02,
+      "action": "WATCH",
+      "reason": "Underperforming BTC by 75 pts over 60d",
+      "signals": {
+        "technical": {
+          "label": "NEUTRAL",
+          "strength": 0.15,
+          "bullets": [
+            "MACD crossing up below zero: early trend"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "BEARISH",
+          "strength": -0.5,
+          "bullets": [
+            "Underperforming BTC by 75 pts over 60d"
+          ]
+        }
+      }
+    },
+    {
+      "symbol": "ETH-USD",
+      "score": 50.56,
+      "action": "WATCH",
+      "reason": "no notable signals",
+      "signals": {
+        "technical": {
+          "label": "NEUTRAL",
+          "strength": -0.15,
+          "bullets": [
+            "MACD crossing down above zero: trend rolling over"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": 0.0,
+          "bullets": []
+        }
+      }
+    },
+    {
+      "symbol": "BNB-USD",
+      "score": 50.26,
+      "action": "WATCH",
+      "reason": "MACD above signal and positive: bullish momentum",
+      "signals": {
+        "technical": {
+          "label": "BULLISH",
+          "strength": 0.3,
+          "bullets": [
+            "MACD above signal and positive: bullish momentum"
+          ]
+        },
+        "funding_rate": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "open_interest": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "onchain": {
+          "label": "NO_DATA",
+          "strength": 0.0,
+          "bullets": []
+        },
+        "cross_asset": {
+          "label": "NEUTRAL",
+          "strength": -0.25,
+          "bullets": [
+            "Underperforming BTC by 17 pts over 60d"
+          ]
+        }
+      }
+    }
+  ]
+}
